@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
 import { useThreeScene } from '@/composables/useThreeScene'
 
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
 const isCubeSelected = ref(false)
-const { init, dispose } = useThreeScene({
+const cubeColor = ref('#66a3ff')
+const cubeColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
+const { init, dispose, setCubeColor } = useThreeScene({
   onCubeSelected(selected) {
     isCubeSelected.value = selected
   },
+})
+
+watch(cubeColor, (color) => {
+  setCubeColor(color)
 })
 
 onMounted(() => {
@@ -31,6 +37,19 @@ onUnmounted(() => {
       <p class="selection-status">
         {{ isCubeSelected ? 'Cube selected' : 'Click the cube' }}
       </p>
+      <fieldset class="color-controls">
+        <legend>Cube color</legend>
+        <button
+          v-for="color in cubeColorOptions"
+          :key="color"
+          class="color-swatch"
+          :class="{ 'is-active': color === cubeColor }"
+          :style="{ backgroundColor: color }"
+          type="button"
+          :aria-label="`Set cube color to ${color}`"
+          @click="cubeColor = color"
+        />
+      </fieldset>
     </div>
 
     <canvas ref="canvas" class="three-canvas" data-testid="three-canvas" />
@@ -66,6 +85,36 @@ onUnmounted(() => {
 .scene-label .selection-status {
   margin-top: 10px;
   text-transform: none;
+}
+
+.color-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0;
+  margin: 12px 0 0;
+  border: 0;
+  pointer-events: auto;
+}
+
+.color-controls legend {
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 35%);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.color-swatch.is-active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 35%);
 }
 
 .scene-label h1 {

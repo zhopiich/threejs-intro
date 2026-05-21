@@ -111,6 +111,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     options.onCubeSelected?.(hits.length > 0)
   }
 
+  function setCubeColor(color: string) {
+    cube?.material.color.set(color)
+  }
+
   function init(canvasElement: HTMLCanvasElement) {
     canvas = canvasElement
     const sizes = getViewportSize()
@@ -194,5 +198,5 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     canvas = undefined
   }
 
-  return { init, dispose }
+  return { init, dispose, setCubeColor }
 }
