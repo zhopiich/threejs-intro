@@ -13,20 +13,15 @@ let pointLightHelper: THREE.PointLightHelper | undefined
 let timer: THREE.Timer | undefined
 let animationId: number | undefined
 
-function initScene(canvasElement: HTMLCanvasElement) {
-  const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight,
-  }
-
-  scene = new THREE.Scene()
-  scene.background = new THREE.Color('#101820')
-
-  camera = new THREE.PerspectiveCamera(60, sizes.width / sizes.height, 0.1, 100)
+function createCamera(width: number, height: number) {
+  const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100)
   camera.position.set(3, 2.4, 4.5)
   camera.lookAt(0, 0.25, 0)
-  scene.add(camera)
 
+  return camera
+}
+
+function createCube() {
   const geometry = new THREE.BoxGeometry(1, 1, 1)
   const material = new THREE.MeshStandardMaterial({
     color: '#66a3ff',
@@ -34,18 +29,24 @@ function initScene(canvasElement: HTMLCanvasElement) {
     metalness: 0.6,
     wireframe: false,
   })
-  cube = new THREE.Mesh(geometry, material)
+  const cube = new THREE.Mesh(geometry, material)
   cube.castShadow = true
-  scene.add(cube)
 
+  return cube
+}
+
+function createGround() {
   const groundGeometry = new THREE.PlaneGeometry(7, 7)
   const groundMaterial = new THREE.MeshStandardMaterial({ color: '#111118', roughness: 0.9 })
-  ground = new THREE.Mesh(groundGeometry, groundMaterial)
+  const ground = new THREE.Mesh(groundGeometry, groundMaterial)
   ground.rotation.x = -Math.PI / 2
   ground.position.y = -1
   ground.receiveShadow = true
-  scene.add(ground)
 
+  return ground
+}
+
+function addLights(scene: THREE.Scene) {
   const ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
   scene.add(ambientLight)
 
@@ -59,11 +60,37 @@ function initScene(canvasElement: HTMLCanvasElement) {
   pointLight.position.set(-2, 1.6, 1.5)
   scene.add(pointLight)
 
+  return pointLight
+}
+
+function addHelpers(scene: THREE.Scene, pointLight: THREE.PointLight) {
   pointLightHelper = new THREE.PointLightHelper(pointLight, 0.2)
   scene.add(pointLightHelper)
 
   const axesHelper = new THREE.AxesHelper(2)
   scene.add(axesHelper)
+}
+
+function initScene(canvasElement: HTMLCanvasElement) {
+  const sizes = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }
+
+  scene = new THREE.Scene()
+  scene.background = new THREE.Color('#101820')
+
+  camera = createCamera(sizes.width, sizes.height)
+  scene.add(camera)
+
+  cube = createCube()
+  scene.add(cube)
+
+  ground = createGround()
+  scene.add(ground)
+
+  const pointLight = addLights(scene)
+  addHelpers(scene, pointLight)
 
   renderer = new THREE.WebGLRenderer({
     canvas: canvasElement,
