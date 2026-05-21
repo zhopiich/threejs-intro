@@ -28,6 +28,6 @@ describe('home view', () => {
 
     expect(wrapper.find('[data-testid="three-canvas"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Three.js Phase 1')
-    expect(wrapper.text()).toContain('Floating Cube With Shadows')
+    expect(wrapper.text()).toContain('Floating Cube With Three Lights')
   })
 })
