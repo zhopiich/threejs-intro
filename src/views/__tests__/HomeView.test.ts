@@ -11,6 +11,9 @@ vi.mock('three', async (importOriginal) => {
     render = vi.fn()
     setPixelRatio = vi.fn()
     setSize = vi.fn()
+    shadowMap = {
+      enabled: false,
+    }
   }
 
   return {
@@ -25,5 +28,6 @@ describe('home view', () => {
 
     expect(wrapper.find('[data-testid="three-canvas"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Three.js Phase 1')
+    expect(wrapper.text()).toContain('Floating Cube With Shadows')
   })
 })

@@ -8,6 +8,7 @@ let renderer: THREE.WebGLRenderer | undefined
 let scene: THREE.Scene | undefined
 let camera: THREE.PerspectiveCamera | undefined
 let cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
+let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
 let timer: THREE.Timer | undefined
 let animationId: number | undefined
 
@@ -21,20 +22,31 @@ function initScene(canvasElement: HTMLCanvasElement) {
   scene.background = new THREE.Color('#101820')
 
   camera = new THREE.PerspectiveCamera(60, sizes.width / sizes.height, 0.1, 100)
-  camera.position.set(2.5, 2, 4)
-  camera.lookAt(0, 0, 0)
+  camera.position.set(3, 2.4, 4.5)
+  camera.lookAt(0, 0.25, 0)
   scene.add(camera)
 
   const geometry = new THREE.BoxGeometry(1, 1, 1)
   const material = new THREE.MeshStandardMaterial({ color: '#66a3ff' })
   cube = new THREE.Mesh(geometry, material)
+  cube.castShadow = true
   scene.add(cube)
+
+  const groundGeometry = new THREE.PlaneGeometry(7, 7)
+  const groundMaterial = new THREE.MeshStandardMaterial({ color: '#111118', roughness: 0.9 })
+  ground = new THREE.Mesh(groundGeometry, groundMaterial)
+  ground.rotation.x = -Math.PI / 2
+  ground.position.y = -1
+  ground.receiveShadow = true
+  scene.add(ground)
 
   const ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
   scene.add(ambientLight)
 
   const directionalLight = new THREE.DirectionalLight('#ffffff', 2)
   directionalLight.position.set(3, 4, 5)
+  directionalLight.castShadow = true
+  directionalLight.shadow.mapSize.set(1024, 1024)
   scene.add(directionalLight)
 
   const axesHelper = new THREE.AxesHelper(2)
@@ -46,6 +58,7 @@ function initScene(canvasElement: HTMLCanvasElement) {
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(sizes.width, sizes.height)
+  renderer.shadowMap.enabled = true
 
   timer = new THREE.Timer()
   timer.connect(document)
@@ -56,6 +69,7 @@ function initScene(canvasElement: HTMLCanvasElement) {
 
     timer.update(timestamp)
     const elapsedTime = timer.getElapsed()
+    cube.position.y = Math.sin(elapsedTime * 1.5) * 0.3
     cube.rotation.x = elapsedTime * 0.45
     cube.rotation.y = elapsedTime * 0.8
 
@@ -72,11 +86,14 @@ function disposeScene() {
 
   cube?.geometry.dispose()
   cube?.material.dispose()
+  ground?.geometry.dispose()
+  ground?.material.dispose()
   timer?.dispose()
   renderer?.dispose()
 
   animationId = undefined
   cube = undefined
+  ground = undefined
   camera = undefined
   scene = undefined
   timer = undefined
@@ -98,7 +115,7 @@ onUnmounted(() => {
     <div class="scene-label">
       <p>Three.js Phase 1</p>
       <h1 id="page-title">
-        Core Rendering Flow
+        Floating Cube With Shadows
       </h1>
     </div>
 
