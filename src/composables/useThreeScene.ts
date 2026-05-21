@@ -115,6 +115,80 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     cube?.material.color.set(color)
   }
 
+  function createRenderer(canvasElement: HTMLCanvasElement, width: number, height: number) {
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvasElement,
+      antialias: true,
+    })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setSize(width, height)
+    renderer.shadowMap.enabled = true
+
+    return renderer
+  }
+
+  function createControls(camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) {
+    const controls = new OrbitControls(camera, renderer.domElement)
+    controls.enableDamping = true
+    controls.target.set(0, 0, 0)
+    controls.update()
+
+    return controls
+  }
+
+  function addEventListeners() {
+    window.addEventListener('resize', updateRendererSize)
+    canvas?.addEventListener('pointerdown', handleCanvasPointerDown)
+  }
+
+  function removeEventListeners() {
+    window.removeEventListener('resize', updateRendererSize)
+    canvas?.removeEventListener('pointerdown', handleCanvasPointerDown)
+  }
+
+  function startAnimationLoop() {
+    function animate(timestamp: number) {
+      if (!renderer || !scene || !camera || !cube || !timer)
+        return
+
+      timer.update(timestamp)
+      const elapsedTime = timer.getElapsed()
+      cube.position.y = Math.sin(elapsedTime * 1.5) * 0.3
+      cube.rotation.x = elapsedTime * 0.45
+      cube.rotation.y = elapsedTime * 0.8
+
+      controls?.update()
+      renderer.render(scene, camera)
+      animationId = window.requestAnimationFrame(animate)
+    }
+
+    animationId = window.requestAnimationFrame(animate)
+  }
+
+  function disposeSceneResources() {
+    cube?.geometry.dispose()
+    cube?.material.dispose()
+    ground?.geometry.dispose()
+    ground?.material.dispose()
+    pointLightHelper?.dispose()
+    controls?.dispose()
+    timer?.dispose()
+    renderer?.dispose()
+  }
+
+  function resetSceneReferences() {
+    animationId = undefined
+    cube = undefined
+    ground = undefined
+    pointLightHelper = undefined
+    controls = undefined
+    camera = undefined
+    scene = undefined
+    timer = undefined
+    renderer = undefined
+    canvas = undefined
+  }
+
   function init(canvasElement: HTMLCanvasElement) {
     canvas = canvasElement
     const sizes = getViewportSize()
@@ -134,68 +208,23 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     const pointLight = addLights(scene)
     addHelpers(scene, pointLight)
 
-    renderer = new THREE.WebGLRenderer({
-      canvas: canvasElement,
-      antialias: true,
-    })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.shadowMap.enabled = true
-    window.addEventListener('resize', updateRendererSize)
-    canvas.addEventListener('pointerdown', handleCanvasPointerDown)
-
-    controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
-    controls.target.set(0, 0, 0)
-    controls.update()
+    renderer = createRenderer(canvasElement, sizes.width, sizes.height)
+    controls = createControls(camera, renderer)
+    addEventListeners()
 
     timer = new THREE.Timer()
     timer.connect(document)
 
-    function animate(timestamp: number) {
-      if (!renderer || !scene || !camera || !cube || !timer)
-        return
-
-      timer.update(timestamp)
-      const elapsedTime = timer.getElapsed()
-      cube.position.y = Math.sin(elapsedTime * 1.5) * 0.3
-      cube.rotation.x = elapsedTime * 0.45
-      cube.rotation.y = elapsedTime * 0.8
-
-      controls?.update()
-      renderer.render(scene, camera)
-      animationId = window.requestAnimationFrame(animate)
-    }
-
-    animationId = window.requestAnimationFrame(animate)
+    startAnimationLoop()
   }
 
   function dispose() {
     if (animationId !== undefined)
       window.cancelAnimationFrame(animationId)
 
-    window.removeEventListener('resize', updateRendererSize)
-    canvas?.removeEventListener('pointerdown', handleCanvasPointerDown)
-
-    cube?.geometry.dispose()
-    cube?.material.dispose()
-    ground?.geometry.dispose()
-    ground?.material.dispose()
-    pointLightHelper?.dispose()
-    controls?.dispose()
-    timer?.dispose()
-    renderer?.dispose()
-
-    animationId = undefined
-    cube = undefined
-    ground = undefined
-    pointLightHelper = undefined
-    controls = undefined
-    camera = undefined
-    scene = undefined
-    timer = undefined
-    renderer = undefined
-    canvas = undefined
+    removeEventListeners()
+    disposeSceneResources()
+    resetSceneReferences()
   }
 
   return { init, dispose, setCubeColor }
