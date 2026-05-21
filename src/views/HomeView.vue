@@ -1,173 +1,29 @@
 <script setup lang="ts">
-import * as THREE from 'three'
-import { onMounted, onUnmounted, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+
+import { useThreeScene } from '@/composables/useThreeScene'
 
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
+const isCubeSelected = ref(false)
+const cubeColor = ref('#66a3ff')
+const cubeColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
+const { init, dispose, setCubeColor } = useThreeScene({
+  onCubeSelected(selected) {
+    isCubeSelected.value = selected
+  },
+})
 
-let renderer: THREE.WebGLRenderer | undefined
-let scene: THREE.Scene | undefined
-let camera: THREE.PerspectiveCamera | undefined
-let cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
-let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
-let pointLightHelper: THREE.PointLightHelper | undefined
-let timer: THREE.Timer | undefined
-let animationId: number | undefined
-
-function getViewportSize() {
-  return {
-    width: window.innerWidth,
-    height: window.innerHeight,
-  }
-}
-
-function createCamera(width: number, height: number) {
-  const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100)
-  camera.position.set(3, 2.4, 4.5)
-  camera.lookAt(0, 0.25, 0)
-
-  return camera
-}
-
-function createCube() {
-  const geometry = new THREE.BoxGeometry(1, 1, 1)
-  const material = new THREE.MeshStandardMaterial({
-    color: '#66a3ff',
-    roughness: 0.4,
-    metalness: 0.6,
-    wireframe: false,
-  })
-  const cube = new THREE.Mesh(geometry, material)
-  cube.castShadow = true
-
-  return cube
-}
-
-function createGround() {
-  const groundGeometry = new THREE.PlaneGeometry(7, 7)
-  const groundMaterial = new THREE.MeshStandardMaterial({ color: '#111118', roughness: 0.9 })
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-  ground.rotation.x = -Math.PI / 2
-  ground.position.y = -1
-  ground.receiveShadow = true
-
-  return ground
-}
-
-function addLights(scene: THREE.Scene) {
-  const ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
-  scene.add(ambientLight)
-
-  const directionalLight = new THREE.DirectionalLight('#ffffff', 3)
-  directionalLight.position.set(3, 4, 5)
-  directionalLight.castShadow = true
-  directionalLight.shadow.mapSize.set(1024, 1024)
-  scene.add(directionalLight)
-
-  const pointLight = new THREE.PointLight('#ffb86c', 6, 8)
-  pointLight.position.set(-2, 1.6, 1.5)
-  scene.add(pointLight)
-
-  return pointLight
-}
-
-function addHelpers(scene: THREE.Scene, pointLight: THREE.PointLight) {
-  pointLightHelper = new THREE.PointLightHelper(pointLight, 0.2)
-  scene.add(pointLightHelper)
-
-  const axesHelper = new THREE.AxesHelper(2)
-  scene.add(axesHelper)
-}
-
-function updateRendererSize() {
-  if (!camera || !renderer)
-    return
-
-  const { width, height } = getViewportSize()
-
-  camera.aspect = width / height
-  camera.updateProjectionMatrix()
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setSize(width, height)
-}
-
-function initScene(canvasElement: HTMLCanvasElement) {
-  const sizes = getViewportSize()
-
-  scene = new THREE.Scene()
-  scene.background = new THREE.Color('#101820')
-
-  camera = createCamera(sizes.width, sizes.height)
-  scene.add(camera)
-
-  cube = createCube()
-  scene.add(cube)
-
-  ground = createGround()
-  scene.add(ground)
-
-  const pointLight = addLights(scene)
-  addHelpers(scene, pointLight)
-
-  renderer = new THREE.WebGLRenderer({
-    canvas: canvasElement,
-    antialias: true,
-  })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setSize(sizes.width, sizes.height)
-  renderer.shadowMap.enabled = true
-  window.addEventListener('resize', updateRendererSize)
-
-  timer = new THREE.Timer()
-  timer.connect(document)
-
-  function animate(timestamp: number) {
-    if (!renderer || !scene || !camera || !cube || !timer)
-      return
-
-    timer.update(timestamp)
-    const elapsedTime = timer.getElapsed()
-    cube.position.y = Math.sin(elapsedTime * 1.5) * 0.3
-    cube.rotation.x = elapsedTime * 0.45
-    cube.rotation.y = elapsedTime * 0.8
-
-    renderer.render(scene, camera)
-    animationId = window.requestAnimationFrame(animate)
-  }
-
-  animationId = window.requestAnimationFrame(animate)
-}
-
-function disposeScene() {
-  if (animationId !== undefined)
-    window.cancelAnimationFrame(animationId)
-
-  window.removeEventListener('resize', updateRendererSize)
-
-  cube?.geometry.dispose()
-  cube?.material.dispose()
-  ground?.geometry.dispose()
-  ground?.material.dispose()
-  pointLightHelper?.dispose()
-  timer?.dispose()
-  renderer?.dispose()
-
-  animationId = undefined
-  cube = undefined
-  ground = undefined
-  pointLightHelper = undefined
-  camera = undefined
-  scene = undefined
-  timer = undefined
-  renderer = undefined
-}
+watch(cubeColor, (color) => {
+  setCubeColor(color)
+})
 
 onMounted(() => {
   if (canvas.value)
-    initScene(canvas.value)
+    init(canvas.value)
 })
 
 onUnmounted(() => {
-  disposeScene()
+  dispose()
 })
 </script>
 
@@ -178,6 +34,22 @@ onUnmounted(() => {
       <h1 id="page-title">
         Floating Cube With Three Lights
       </h1>
+      <p class="selection-status">
+        {{ isCubeSelected ? 'Cube selected' : 'Click the cube' }}
+      </p>
+      <fieldset class="color-controls">
+        <legend>Cube color</legend>
+        <button
+          v-for="color in cubeColorOptions"
+          :key="color"
+          class="color-swatch"
+          :class="{ 'is-active': color === cubeColor }"
+          :style="{ backgroundColor: color }"
+          type="button"
+          :aria-label="`Set cube color to ${color}`"
+          @click="cubeColor = color"
+        />
+      </fieldset>
     </div>
 
     <canvas ref="canvas" class="three-canvas" data-testid="three-canvas" />
@@ -208,6 +80,41 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.scene-label .selection-status {
+  margin-top: 10px;
+  text-transform: none;
+}
+
+.color-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0;
+  margin: 12px 0 0;
+  border: 0;
+  pointer-events: auto;
+}
+
+.color-controls legend {
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 35%);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.color-swatch.is-active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 35%);
 }
 
 .scene-label h1 {
