@@ -8,6 +8,7 @@ let renderer: THREE.WebGLRenderer | undefined
 let scene: THREE.Scene | undefined
 let camera: THREE.PerspectiveCamera | undefined
 let cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
+let timer: THREE.Timer | undefined
 let animationId: number | undefined
 
 function initScene(canvasElement: HTMLCanvasElement) {
@@ -46,13 +47,15 @@ function initScene(canvasElement: HTMLCanvasElement) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(sizes.width, sizes.height)
 
-  const clock = new THREE.Clock()
+  timer = new THREE.Timer()
+  timer.connect(document)
 
-  function animate() {
-    if (!renderer || !scene || !camera || !cube)
+  function animate(timestamp: number) {
+    if (!renderer || !scene || !camera || !cube || !timer)
       return
 
-    const elapsedTime = clock.getElapsedTime()
+    timer.update(timestamp)
+    const elapsedTime = timer.getElapsed()
     cube.rotation.x = elapsedTime * 0.45
     cube.rotation.y = elapsedTime * 0.8
 
@@ -60,7 +63,7 @@ function initScene(canvasElement: HTMLCanvasElement) {
     animationId = window.requestAnimationFrame(animate)
   }
 
-  animate()
+  animationId = window.requestAnimationFrame(animate)
 }
 
 function disposeScene() {
@@ -69,12 +72,14 @@ function disposeScene() {
 
   cube?.geometry.dispose()
   cube?.material.dispose()
+  timer?.dispose()
   renderer?.dispose()
 
   animationId = undefined
   cube = undefined
   camera = undefined
   scene = undefined
+  timer = undefined
   renderer = undefined
 }
 
