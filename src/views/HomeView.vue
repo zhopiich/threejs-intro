@@ -13,6 +13,13 @@ let pointLightHelper: THREE.PointLightHelper | undefined
 let timer: THREE.Timer | undefined
 let animationId: number | undefined
 
+function getViewportSize() {
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }
+}
+
 function createCamera(width: number, height: number) {
   const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100)
   camera.position.set(3, 2.4, 4.5)
@@ -71,11 +78,20 @@ function addHelpers(scene: THREE.Scene, pointLight: THREE.PointLight) {
   scene.add(axesHelper)
 }
 
+function updateRendererSize() {
+  if (!camera || !renderer)
+    return
+
+  const { width, height } = getViewportSize()
+
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setSize(width, height)
+}
+
 function initScene(canvasElement: HTMLCanvasElement) {
-  const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight,
-  }
+  const sizes = getViewportSize()
 
   scene = new THREE.Scene()
   scene.background = new THREE.Color('#101820')
@@ -99,6 +115,7 @@ function initScene(canvasElement: HTMLCanvasElement) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(sizes.width, sizes.height)
   renderer.shadowMap.enabled = true
+  window.addEventListener('resize', updateRendererSize)
 
   timer = new THREE.Timer()
   timer.connect(document)
@@ -123,6 +140,8 @@ function initScene(canvasElement: HTMLCanvasElement) {
 function disposeScene() {
   if (animationId !== undefined)
     window.cancelAnimationFrame(animationId)
+
+  window.removeEventListener('resize', updateRendererSize)
 
   cube?.geometry.dispose()
   cube?.material.dispose()
