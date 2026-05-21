@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
 
 import { useThreeScene } from '@/composables/useThreeScene'
 
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
-const { init, dispose } = useThreeScene()
+const isCubeSelected = ref(false)
+const { init, dispose } = useThreeScene({
+  onCubeSelected(selected) {
+    isCubeSelected.value = selected
+  },
+})
 
 onMounted(() => {
   if (canvas.value)
@@ -23,6 +28,9 @@ onUnmounted(() => {
       <h1 id="page-title">
         Floating Cube With Three Lights
       </h1>
+      <p class="selection-status">
+        {{ isCubeSelected ? 'Cube selected' : 'Click the cube' }}
+      </p>
     </div>
 
     <canvas ref="canvas" class="three-canvas" data-testid="three-canvas" />
@@ -53,6 +61,11 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.scene-label .selection-status {
+  margin-top: 10px;
+  text-transform: none;
 }
 
 .scene-label h1 {

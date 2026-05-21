@@ -1,7 +1,11 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-export function useThreeScene() {
+export interface ThreeSceneOptions {
+  onCubeSelected?: (selected: boolean) => void
+}
+
+export function useThreeScene(options: ThreeSceneOptions = {}) {
   let renderer: THREE.WebGLRenderer | undefined
   let scene: THREE.Scene | undefined
   let camera: THREE.PerspectiveCamera | undefined
@@ -11,6 +15,10 @@ export function useThreeScene() {
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
   let animationId: number | undefined
+  let canvas: HTMLCanvasElement | undefined
+
+  const raycaster = new THREE.Raycaster()
+  const pointer = new THREE.Vector2()
 
   function getViewportSize() {
     return {
@@ -89,7 +97,22 @@ export function useThreeScene() {
     renderer.setSize(width, height)
   }
 
+  function handleCanvasPointerDown(event: PointerEvent) {
+    if (!canvas || !camera || !cube)
+      return
+
+    const rect = canvas.getBoundingClientRect()
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+    raycaster.setFromCamera(pointer, camera)
+    const hits = raycaster.intersectObject(cube)
+
+    options.onCubeSelected?.(hits.length > 0)
+  }
+
   function init(canvasElement: HTMLCanvasElement) {
+    canvas = canvasElement
     const sizes = getViewportSize()
 
     scene = new THREE.Scene()
@@ -115,6 +138,7 @@ export function useThreeScene() {
     renderer.setSize(sizes.width, sizes.height)
     renderer.shadowMap.enabled = true
     window.addEventListener('resize', updateRendererSize)
+    canvas.addEventListener('pointerdown', handleCanvasPointerDown)
 
     controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
@@ -147,6 +171,7 @@ export function useThreeScene() {
       window.cancelAnimationFrame(animationId)
 
     window.removeEventListener('resize', updateRendererSize)
+    canvas?.removeEventListener('pointerdown', handleCanvasPointerDown)
 
     cube?.geometry.dispose()
     cube?.material.dispose()
@@ -166,6 +191,7 @@ export function useThreeScene() {
     scene = undefined
     timer = undefined
     renderer = undefined
+    canvas = undefined
   }
 
   return { init, dispose }
