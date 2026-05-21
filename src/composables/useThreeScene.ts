@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 export function useThreeScene() {
   let renderer: THREE.WebGLRenderer | undefined
@@ -7,6 +8,7 @@ export function useThreeScene() {
   let cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
   let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
   let pointLightHelper: THREE.PointLightHelper | undefined
+  let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
   let animationId: number | undefined
 
@@ -114,6 +116,11 @@ export function useThreeScene() {
     renderer.shadowMap.enabled = true
     window.addEventListener('resize', updateRendererSize)
 
+    controls = new OrbitControls(camera, renderer.domElement)
+    controls.enableDamping = true
+    controls.target.set(0, 0, 0)
+    controls.update()
+
     timer = new THREE.Timer()
     timer.connect(document)
 
@@ -127,6 +134,7 @@ export function useThreeScene() {
       cube.rotation.x = elapsedTime * 0.45
       cube.rotation.y = elapsedTime * 0.8
 
+      controls?.update()
       renderer.render(scene, camera)
       animationId = window.requestAnimationFrame(animate)
     }
@@ -145,6 +153,7 @@ export function useThreeScene() {
     ground?.geometry.dispose()
     ground?.material.dispose()
     pointLightHelper?.dispose()
+    controls?.dispose()
     timer?.dispose()
     renderer?.dispose()
 
@@ -152,6 +161,7 @@ export function useThreeScene() {
     cube = undefined
     ground = undefined
     pointLightHelper = undefined
+    controls = undefined
     camera = undefined
     scene = undefined
     timer = undefined
