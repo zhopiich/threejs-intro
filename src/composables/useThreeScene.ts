@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 export interface LightSettings {
   ambientColor: string
@@ -26,6 +25,16 @@ export interface ModelLoadingState {
   status: 'idle' | 'loading' | 'loaded' | 'error'
   progress: number
   errorMessage?: string
+}
+
+type GLTFLoaderModule = typeof import('three/examples/jsm/loaders/GLTFLoader.js')
+
+let gltfLoaderModulePromise: Promise<GLTFLoaderModule> | undefined
+
+function importGLTFLoader() {
+  gltfLoaderModulePromise ??= import('three/examples/jsm/loaders/GLTFLoader.js')
+
+  return gltfLoaderModulePromise
 }
 
 export function getHorizontalDragPosition(
@@ -82,7 +91,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let modelLoadId = 0
   let selectableObjects: THREE.Object3D[] = []
 
-  const gltfLoader = new GLTFLoader()
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
   const dragPlane = new THREE.Plane()
@@ -243,13 +251,20 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     placeholderMesh?.material.color.set(color)
   }
 
-  function loadModel(url: string) {
+  async function loadModel(url: string) {
     if (!scene)
       return
 
     const currentLoadId = modelLoadId + 1
     modelLoadId = currentLoadId
     options.onModelLoadingStateChanged?.({ status: 'loading', progress: 0 })
+
+    const { GLTFLoader } = await importGLTFLoader()
+
+    if (currentLoadId !== modelLoadId || !scene)
+      return
+
+    const gltfLoader = new GLTFLoader()
 
     gltfLoader.load(
       url,
