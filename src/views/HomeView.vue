@@ -18,11 +18,11 @@ const modelLoadingState = ref<ModelLoadingState>({
 })
 const lightSettings = ref<LightSettings>({
   ambientColor: '#ffffff',
-  ambientIntensity: 0.5,
+  ambientIntensity: 0.2,
   directionalColor: '#ffffff',
-  directionalIntensity: 3,
+  directionalIntensity: 1.2,
   pointColor: '#ffb86c',
-  pointIntensity: 6,
+  pointIntensity: 2,
   pointPosition: {
     x: -2,
     y: 1.6,

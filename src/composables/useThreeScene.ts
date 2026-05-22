@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 export interface LightSettings {
   ambientColor: string
@@ -83,6 +84,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let pointLight: THREE.PointLight | undefined
   let pointLightHandle: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> | undefined
   let pointLightHelper: THREE.PointLightHelper | undefined
+  let environmentTexture: THREE.Texture | undefined
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
   let animationId: number | undefined
@@ -137,16 +139,16 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function addLights(scene: THREE.Scene) {
-    ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
+    ambientLight = new THREE.AmbientLight('#ffffff', 0.2)
     scene.add(ambientLight)
 
-    directionalLight = new THREE.DirectionalLight('#ffffff', 3)
+    directionalLight = new THREE.DirectionalLight('#ffffff', 1.2)
     directionalLight.position.set(3, 4, 5)
     directionalLight.castShadow = true
     directionalLight.shadow.mapSize.set(1024, 1024)
     scene.add(directionalLight)
 
-    pointLight = new THREE.PointLight('#ffb86c', 6, 8)
+    pointLight = new THREE.PointLight('#ffb86c', 2, 8)
     pointLight.position.set(-2, 1.6, 1.5)
     scene.add(pointLight)
 
@@ -394,8 +396,22 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     renderer.shadowMap.enabled = true
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1
 
     return renderer
+  }
+
+  function addEnvironmentLighting(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
+    const pmremGenerator = new THREE.PMREMGenerator(renderer)
+    const roomEnvironment = new RoomEnvironment()
+
+    environmentTexture = pmremGenerator.fromScene(roomEnvironment).texture
+    scene.environment = environmentTexture
+
+    roomEnvironment.dispose()
+    pmremGenerator.dispose()
   }
 
   function createControls(camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) {
@@ -447,6 +463,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   function disposeSceneResources() {
     disposeLoadedModel()
     disposePlaceholderMesh()
+    scene?.environment?.dispose()
+    if (scene)
+      scene.environment = null
+    environmentTexture = undefined
     pointLightHandle?.geometry.dispose()
     pointLightHandle?.material.dispose()
     ground?.geometry.dispose()
@@ -467,6 +487,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     pointLight = undefined
     pointLightHandle = undefined
     pointLightHelper = undefined
+    environmentTexture = undefined
     controls = undefined
     camera = undefined
     scene = undefined
@@ -502,6 +523,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     addHelpers(scene, pointLight)
 
     renderer = createRenderer(canvasElement, sizes.width, sizes.height)
+    addEnvironmentLighting(scene, renderer)
     controls = createControls(camera, renderer)
     addEventListeners()
 
