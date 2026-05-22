@@ -24,6 +24,13 @@ const lightSettings = ref<LightSettings>({
     z: 1.5,
   },
 })
+
+function updatePointLightPosition(position: LightSettings['pointPosition']) {
+  lightSettings.value = {
+    ...lightSettings.value,
+    pointPosition: position,
+  }
+}
 </script>
 
 <template>
@@ -32,6 +39,7 @@ const lightSettings = ref<LightSettings>({
       :model-color="modelColor"
       :light-settings="lightSettings"
       @model-selected="isModelSelected = $event"
+      @point-light-position-changed="updatePointLightPosition"
     />
 
     <div class="viewer-shell">

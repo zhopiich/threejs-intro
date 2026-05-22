@@ -17,6 +17,18 @@ export interface LightSettings {
 
 export interface ThreeSceneOptions {
   onModelSelected?: (selected: boolean) => void
+  onPointLightPositionChanged?: (position: LightSettings['pointPosition']) => void
+}
+
+export function getHorizontalDragPosition(
+  currentPosition: LightSettings['pointPosition'],
+  hitPoint: THREE.Vector3,
+): LightSettings['pointPosition'] {
+  return {
+    x: hitPoint.x,
+    y: currentPosition.y,
+    z: hitPoint.z,
+  }
 }
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {
@@ -28,14 +40,18 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let ambientLight: THREE.AmbientLight | undefined
   let directionalLight: THREE.DirectionalLight | undefined
   let pointLight: THREE.PointLight | undefined
+  let pointLightHandle: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> | undefined
   let pointLightHelper: THREE.PointLightHelper | undefined
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
   let animationId: number | undefined
   let canvas: HTMLCanvasElement | undefined
+  let isDraggingPointLight = false
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
+  const dragPlane = new THREE.Plane()
+  const dragHitPoint = new THREE.Vector3()
 
   function getViewportSize() {
     return {
@@ -102,6 +118,15 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     scene.add(axesHelper)
   }
 
+  function createPointLightHandle(pointLight: THREE.PointLight) {
+    const geometry = new THREE.SphereGeometry(0.12, 24, 16)
+    const material = new THREE.MeshBasicMaterial({ color: pointLight.color })
+    const handle = new THREE.Mesh(geometry, material)
+    handle.position.copy(pointLight.position)
+
+    return handle
+  }
+
   function updateRendererSize() {
     if (!camera || !renderer)
       return
@@ -118,14 +143,65 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     if (!canvas || !camera || !modelMesh)
       return
 
-    const rect = canvas.getBoundingClientRect()
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    updatePointer(event)
 
     raycaster.setFromCamera(pointer, camera)
+
+    if (pointLightHandle && pointLight) {
+      const lightHandleHits = raycaster.intersectObject(pointLightHandle)
+
+      if (lightHandleHits.length > 0) {
+        isDraggingPointLight = true
+        if (controls)
+          controls.enabled = false
+        dragPlane.set(new THREE.Vector3(0, 1, 0), -pointLight.position.y)
+        canvas.setPointerCapture(event.pointerId)
+        options.onModelSelected?.(false)
+        return
+      }
+    }
+
     const hits = raycaster.intersectObject(modelMesh)
 
     options.onModelSelected?.(hits.length > 0)
+  }
+
+  function handleCanvasPointerMove(event: PointerEvent) {
+    if (!canvas || !camera || !pointLight || !pointLightHandle || !isDraggingPointLight)
+      return
+
+    updatePointer(event)
+    raycaster.setFromCamera(pointer, camera)
+
+    if (!raycaster.ray.intersectPlane(dragPlane, dragHitPoint))
+      return
+
+    const nextPosition = getHorizontalDragPosition(pointLight.position, dragHitPoint)
+    pointLight.position.set(nextPosition.x, nextPosition.y, nextPosition.z)
+    pointLightHandle.position.copy(pointLight.position)
+    pointLightHelper?.update()
+    options.onPointLightPositionChanged?.(nextPosition)
+  }
+
+  function handleCanvasPointerUp(event: PointerEvent) {
+    if (!isDraggingPointLight)
+      return
+
+    isDraggingPointLight = false
+    if (controls)
+      controls.enabled = true
+
+    if (canvas?.hasPointerCapture(event.pointerId))
+      canvas.releasePointerCapture(event.pointerId)
+  }
+
+  function updatePointer(event: PointerEvent) {
+    if (!canvas)
+      return
+
+    const rect = canvas.getBoundingClientRect()
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
   }
 
   function setModelColor(color: string) {
@@ -151,6 +227,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         settings.pointPosition.y,
         settings.pointPosition.z,
       )
+      if (pointLightHandle) {
+        pointLightHandle.material.color.set(settings.pointColor)
+        pointLightHandle.position.copy(pointLight.position)
+      }
       pointLightHelper?.update()
     }
   }
@@ -179,11 +259,17 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   function addEventListeners() {
     window.addEventListener('resize', updateRendererSize)
     canvas?.addEventListener('pointerdown', handleCanvasPointerDown)
+    canvas?.addEventListener('pointermove', handleCanvasPointerMove)
+    canvas?.addEventListener('pointerup', handleCanvasPointerUp)
+    canvas?.addEventListener('pointerleave', handleCanvasPointerUp)
   }
 
   function removeEventListeners() {
     window.removeEventListener('resize', updateRendererSize)
     canvas?.removeEventListener('pointerdown', handleCanvasPointerDown)
+    canvas?.removeEventListener('pointermove', handleCanvasPointerMove)
+    canvas?.removeEventListener('pointerup', handleCanvasPointerUp)
+    canvas?.removeEventListener('pointerleave', handleCanvasPointerUp)
   }
 
   function startAnimationLoop() {
@@ -208,6 +294,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   function disposeSceneResources() {
     modelMesh?.geometry.dispose()
     modelMesh?.material.dispose()
+    pointLightHandle?.geometry.dispose()
+    pointLightHandle?.material.dispose()
     ground?.geometry.dispose()
     ground?.material.dispose()
     pointLightHelper?.dispose()
@@ -223,6 +311,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     ambientLight = undefined
     directionalLight = undefined
     pointLight = undefined
+    pointLightHandle = undefined
     pointLightHelper = undefined
     controls = undefined
     camera = undefined
@@ -249,6 +338,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     scene.add(ground)
 
     const pointLight = addLights(scene)
+    pointLightHandle = createPointLightHandle(pointLight)
+    scene.add(pointLightHandle)
+
     addHelpers(scene, pointLight)
 
     renderer = createRenderer(canvasElement, sizes.width, sizes.height)

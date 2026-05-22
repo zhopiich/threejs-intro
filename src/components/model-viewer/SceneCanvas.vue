@@ -12,12 +12,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   modelSelected: [selected: boolean]
+  pointLightPositionChanged: [position: LightSettings['pointPosition']]
 }>()
 
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
 const { init, dispose, setLightSettings, setModelColor } = useThreeScene({
   onModelSelected(selected) {
     emit('modelSelected', selected)
+  },
+  onPointLightPositionChanged(position) {
+    emit('pointLightPositionChanged', position)
   },
 })
 
