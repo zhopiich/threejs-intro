@@ -1,24 +1,57 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
+export interface LightSettings {
+  ambientColor: string
+  ambientIntensity: number
+  directionalColor: string
+  directionalIntensity: number
+  pointColor: string
+  pointIntensity: number
+  pointPosition: {
+    x: number
+    y: number
+    z: number
+  }
+}
+
 export interface ThreeSceneOptions {
-  onCubeSelected?: (selected: boolean) => void
+  onModelSelected?: (selected: boolean) => void
+  onPointLightPositionChanged?: (position: LightSettings['pointPosition']) => void
+}
+
+export function getHorizontalDragPosition(
+  currentPosition: LightSettings['pointPosition'],
+  hitPoint: THREE.Vector3,
+): LightSettings['pointPosition'] {
+  return {
+    x: hitPoint.x,
+    y: currentPosition.y,
+    z: hitPoint.z,
+  }
 }
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {
   let renderer: THREE.WebGLRenderer | undefined
   let scene: THREE.Scene | undefined
   let camera: THREE.PerspectiveCamera | undefined
-  let cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
+  let modelMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
   let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
+  let ambientLight: THREE.AmbientLight | undefined
+  let directionalLight: THREE.DirectionalLight | undefined
+  let pointLight: THREE.PointLight | undefined
+  let pointLightHandle: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> | undefined
   let pointLightHelper: THREE.PointLightHelper | undefined
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
   let animationId: number | undefined
   let canvas: HTMLCanvasElement | undefined
+  let isDraggingPointLight = false
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
+  const dragPlane = new THREE.Plane()
+  const dragHitPoint = new THREE.Vector3()
 
   function getViewportSize() {
     return {
@@ -35,7 +68,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     return camera
   }
 
-  function createCube() {
+  function createModelPlaceholder() {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
     const material = new THREE.MeshStandardMaterial({
       color: '#66a3ff',
@@ -43,10 +76,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       metalness: 0.6,
       wireframe: false,
     })
-    const cube = new THREE.Mesh(geometry, material)
-    cube.castShadow = true
+    const modelMesh = new THREE.Mesh(geometry, material)
+    modelMesh.castShadow = true
 
-    return cube
+    return modelMesh
   }
 
   function createGround() {
@@ -61,16 +94,16 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function addLights(scene: THREE.Scene) {
-    const ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
+    ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
     scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight('#ffffff', 3)
+    directionalLight = new THREE.DirectionalLight('#ffffff', 3)
     directionalLight.position.set(3, 4, 5)
     directionalLight.castShadow = true
     directionalLight.shadow.mapSize.set(1024, 1024)
     scene.add(directionalLight)
 
-    const pointLight = new THREE.PointLight('#ffb86c', 6, 8)
+    pointLight = new THREE.PointLight('#ffb86c', 6, 8)
     pointLight.position.set(-2, 1.6, 1.5)
     scene.add(pointLight)
 
@@ -83,6 +116,15 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
     const axesHelper = new THREE.AxesHelper(2)
     scene.add(axesHelper)
+  }
+
+  function createPointLightHandle(pointLight: THREE.PointLight) {
+    const geometry = new THREE.SphereGeometry(0.12, 24, 16)
+    const material = new THREE.MeshBasicMaterial({ color: pointLight.color })
+    const handle = new THREE.Mesh(geometry, material)
+    handle.position.copy(pointLight.position)
+
+    return handle
   }
 
   function updateRendererSize() {
@@ -98,21 +140,99 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function handleCanvasPointerDown(event: PointerEvent) {
-    if (!canvas || !camera || !cube)
+    if (!canvas || !camera || !modelMesh)
+      return
+
+    updatePointer(event)
+
+    raycaster.setFromCamera(pointer, camera)
+
+    if (pointLightHandle && pointLight) {
+      const lightHandleHits = raycaster.intersectObject(pointLightHandle)
+
+      if (lightHandleHits.length > 0) {
+        isDraggingPointLight = true
+        if (controls)
+          controls.enabled = false
+        dragPlane.set(new THREE.Vector3(0, 1, 0), -pointLight.position.y)
+        canvas.setPointerCapture(event.pointerId)
+        options.onModelSelected?.(false)
+        return
+      }
+    }
+
+    const hits = raycaster.intersectObject(modelMesh)
+
+    options.onModelSelected?.(hits.length > 0)
+  }
+
+  function handleCanvasPointerMove(event: PointerEvent) {
+    if (!canvas || !camera || !pointLight || !pointLightHandle || !isDraggingPointLight)
+      return
+
+    updatePointer(event)
+    raycaster.setFromCamera(pointer, camera)
+
+    if (!raycaster.ray.intersectPlane(dragPlane, dragHitPoint))
+      return
+
+    const nextPosition = getHorizontalDragPosition(pointLight.position, dragHitPoint)
+    pointLight.position.set(nextPosition.x, nextPosition.y, nextPosition.z)
+    pointLightHandle.position.copy(pointLight.position)
+    pointLightHelper?.update()
+    options.onPointLightPositionChanged?.(nextPosition)
+  }
+
+  function handleCanvasPointerUp(event: PointerEvent) {
+    if (!isDraggingPointLight)
+      return
+
+    isDraggingPointLight = false
+    if (controls)
+      controls.enabled = true
+
+    if (canvas?.hasPointerCapture(event.pointerId))
+      canvas.releasePointerCapture(event.pointerId)
+  }
+
+  function updatePointer(event: PointerEvent) {
+    if (!canvas)
       return
 
     const rect = canvas.getBoundingClientRect()
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-
-    raycaster.setFromCamera(pointer, camera)
-    const hits = raycaster.intersectObject(cube)
-
-    options.onCubeSelected?.(hits.length > 0)
   }
 
-  function setCubeColor(color: string) {
-    cube?.material.color.set(color)
+  function setModelColor(color: string) {
+    modelMesh?.material.color.set(color)
+  }
+
+  function setLightSettings(settings: LightSettings) {
+    if (ambientLight) {
+      ambientLight.color.set(settings.ambientColor)
+      ambientLight.intensity = settings.ambientIntensity
+    }
+
+    if (directionalLight) {
+      directionalLight.color.set(settings.directionalColor)
+      directionalLight.intensity = settings.directionalIntensity
+    }
+
+    if (pointLight) {
+      pointLight.color.set(settings.pointColor)
+      pointLight.intensity = settings.pointIntensity
+      pointLight.position.set(
+        settings.pointPosition.x,
+        settings.pointPosition.y,
+        settings.pointPosition.z,
+      )
+      if (pointLightHandle) {
+        pointLightHandle.material.color.set(settings.pointColor)
+        pointLightHandle.position.copy(pointLight.position)
+      }
+      pointLightHelper?.update()
+    }
   }
 
   function createRenderer(canvasElement: HTMLCanvasElement, width: number, height: number) {
@@ -139,23 +259,29 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   function addEventListeners() {
     window.addEventListener('resize', updateRendererSize)
     canvas?.addEventListener('pointerdown', handleCanvasPointerDown)
+    canvas?.addEventListener('pointermove', handleCanvasPointerMove)
+    canvas?.addEventListener('pointerup', handleCanvasPointerUp)
+    canvas?.addEventListener('pointerleave', handleCanvasPointerUp)
   }
 
   function removeEventListeners() {
     window.removeEventListener('resize', updateRendererSize)
     canvas?.removeEventListener('pointerdown', handleCanvasPointerDown)
+    canvas?.removeEventListener('pointermove', handleCanvasPointerMove)
+    canvas?.removeEventListener('pointerup', handleCanvasPointerUp)
+    canvas?.removeEventListener('pointerleave', handleCanvasPointerUp)
   }
 
   function startAnimationLoop() {
     function animate(timestamp: number) {
-      if (!renderer || !scene || !camera || !cube || !timer)
+      if (!renderer || !scene || !camera || !modelMesh || !timer)
         return
 
       timer.update(timestamp)
       const elapsedTime = timer.getElapsed()
-      cube.position.y = Math.sin(elapsedTime * 1.5) * 0.3
-      cube.rotation.x = elapsedTime * 0.45
-      cube.rotation.y = elapsedTime * 0.8
+      modelMesh.position.y = Math.sin(elapsedTime * 1.5) * 0.3
+      modelMesh.rotation.x = elapsedTime * 0.45
+      modelMesh.rotation.y = elapsedTime * 0.8
 
       controls?.update()
       renderer.render(scene, camera)
@@ -166,8 +292,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function disposeSceneResources() {
-    cube?.geometry.dispose()
-    cube?.material.dispose()
+    modelMesh?.geometry.dispose()
+    modelMesh?.material.dispose()
+    pointLightHandle?.geometry.dispose()
+    pointLightHandle?.material.dispose()
     ground?.geometry.dispose()
     ground?.material.dispose()
     pointLightHelper?.dispose()
@@ -178,8 +306,12 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
   function resetSceneReferences() {
     animationId = undefined
-    cube = undefined
+    modelMesh = undefined
     ground = undefined
+    ambientLight = undefined
+    directionalLight = undefined
+    pointLight = undefined
+    pointLightHandle = undefined
     pointLightHelper = undefined
     controls = undefined
     camera = undefined
@@ -199,13 +331,16 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     camera = createCamera(sizes.width, sizes.height)
     scene.add(camera)
 
-    cube = createCube()
-    scene.add(cube)
+    modelMesh = createModelPlaceholder()
+    scene.add(modelMesh)
 
     ground = createGround()
     scene.add(ground)
 
     const pointLight = addLights(scene)
+    pointLightHandle = createPointLightHandle(pointLight)
+    scene.add(pointLightHandle)
+
     addHelpers(scene, pointLight)
 
     renderer = createRenderer(canvasElement, sizes.width, sizes.height)
@@ -227,5 +362,5 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     resetSceneReferences()
   }
 
-  return { init, dispose, setCubeColor }
+  return { init, dispose, setLightSettings, setModelColor }
 }
