@@ -1,6 +1,20 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
+export interface LightSettings {
+  ambientColor: string
+  ambientIntensity: number
+  directionalColor: string
+  directionalIntensity: number
+  pointColor: string
+  pointIntensity: number
+  pointPosition: {
+    x: number
+    y: number
+    z: number
+  }
+}
+
 export interface ThreeSceneOptions {
   onModelSelected?: (selected: boolean) => void
 }
@@ -11,6 +25,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let camera: THREE.PerspectiveCamera | undefined
   let modelMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
   let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
+  let ambientLight: THREE.AmbientLight | undefined
+  let directionalLight: THREE.DirectionalLight | undefined
+  let pointLight: THREE.PointLight | undefined
   let pointLightHelper: THREE.PointLightHelper | undefined
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
@@ -61,16 +78,16 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function addLights(scene: THREE.Scene) {
-    const ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
+    ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
     scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight('#ffffff', 3)
+    directionalLight = new THREE.DirectionalLight('#ffffff', 3)
     directionalLight.position.set(3, 4, 5)
     directionalLight.castShadow = true
     directionalLight.shadow.mapSize.set(1024, 1024)
     scene.add(directionalLight)
 
-    const pointLight = new THREE.PointLight('#ffb86c', 6, 8)
+    pointLight = new THREE.PointLight('#ffb86c', 6, 8)
     pointLight.position.set(-2, 1.6, 1.5)
     scene.add(pointLight)
 
@@ -113,6 +130,29 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
   function setModelColor(color: string) {
     modelMesh?.material.color.set(color)
+  }
+
+  function setLightSettings(settings: LightSettings) {
+    if (ambientLight) {
+      ambientLight.color.set(settings.ambientColor)
+      ambientLight.intensity = settings.ambientIntensity
+    }
+
+    if (directionalLight) {
+      directionalLight.color.set(settings.directionalColor)
+      directionalLight.intensity = settings.directionalIntensity
+    }
+
+    if (pointLight) {
+      pointLight.color.set(settings.pointColor)
+      pointLight.intensity = settings.pointIntensity
+      pointLight.position.set(
+        settings.pointPosition.x,
+        settings.pointPosition.y,
+        settings.pointPosition.z,
+      )
+      pointLightHelper?.update()
+    }
   }
 
   function createRenderer(canvasElement: HTMLCanvasElement, width: number, height: number) {
@@ -180,6 +220,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     animationId = undefined
     modelMesh = undefined
     ground = undefined
+    ambientLight = undefined
+    directionalLight = undefined
+    pointLight = undefined
     pointLightHelper = undefined
     controls = undefined
     camera = undefined
@@ -227,5 +270,5 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     resetSceneReferences()
   }
 
-  return { init, dispose, setModelColor }
+  return { init, dispose, setLightSettings, setModelColor }
 }
