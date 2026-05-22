@@ -1,7 +1,10 @@
 import * as THREE from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { getHorizontalDragPosition } from '../useThreeScene'
+import {
+  disposeObject3DResources,
+  getHorizontalDragPosition,
+} from '../useThreeScene'
 
 describe('useThreeScene drag logic', () => {
   it('updates point light x/z from the drag hit point while preserving y', () => {
@@ -13,5 +16,24 @@ describe('useThreeScene drag logic', () => {
       y: 1.6,
       z: -2.75,
     })
+  })
+
+  it('disposes loaded model geometry, material, and textures', () => {
+    const geometry = new THREE.BoxGeometry()
+    const texture = new THREE.Texture()
+    const material = new THREE.MeshStandardMaterial({ map: texture })
+    const mesh = new THREE.Mesh(geometry, material)
+    const group = new THREE.Group()
+    const disposeGeometry = vi.spyOn(geometry, 'dispose')
+    const disposeMaterial = vi.spyOn(material, 'dispose')
+    const disposeTexture = vi.spyOn(texture, 'dispose')
+
+    group.add(mesh)
+
+    disposeObject3DResources(group)
+
+    expect(disposeGeometry).toHaveBeenCalledOnce()
+    expect(disposeMaterial).toHaveBeenCalledOnce()
+    expect(disposeTexture).toHaveBeenCalledOnce()
   })
 })

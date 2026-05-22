@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LightSettings } from '@/composables/useThreeScene'
+import type { LightSettings, ModelLoadingState } from '@/composables/useThreeScene'
 
 import { ref } from 'vue'
 
@@ -9,8 +9,13 @@ import ModelInfoPanel from '@/components/model-viewer/ModelInfoPanel.vue'
 import SceneCanvas from '@/components/model-viewer/SceneCanvas.vue'
 
 const isModelSelected = ref(false)
+const modelUrl = '/models/DamagedHelmet.glb'
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
+const modelLoadingState = ref<ModelLoadingState>({
+  status: 'idle',
+  progress: 0,
+})
 const lightSettings = ref<LightSettings>({
   ambientColor: '#ffffff',
   ambientIntensity: 0.5,
@@ -36,16 +41,25 @@ function updatePointLightPosition(position: LightSettings['pointPosition']) {
 <template>
   <main class="home-view" aria-labelledby="model-viewer-title">
     <SceneCanvas
+      :model-url="modelUrl"
       :model-color="modelColor"
       :light-settings="lightSettings"
+      @model-loading-state-changed="modelLoadingState = $event"
       @model-selected="isModelSelected = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
 
     <div class="viewer-shell">
       <div class="viewer-primary-panel">
-        <ModelInfoPanel :is-model-selected="isModelSelected" />
-        <ModelColorPicker v-model="modelColor" :options="modelColorOptions" />
+        <ModelInfoPanel
+          :is-model-selected="isModelSelected"
+          :loading-state="modelLoadingState"
+        />
+        <ModelColorPicker
+          v-if="modelLoadingState.status !== 'loaded'"
+          v-model="modelColor"
+          :options="modelColorOptions"
+        />
       </div>
 
       <LightControlPanel v-model:settings="lightSettings" />
