@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import type { LightSettings, ModelLoadingState } from '@/composables/useThreeScene'
 
-import { ref, useTemplateRef } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 
 import LightControlPanel from '@/components/model-viewer/LightControlPanel.vue'
 import ModelColorPicker from '@/components/model-viewer/ModelColorPicker.vue'
 import ModelInfoPanel from '@/components/model-viewer/ModelInfoPanel.vue'
+import { modelOptions } from '@/components/model-viewer/modelOptions'
+import ModelSelector from '@/components/model-viewer/ModelSelector.vue'
 import SceneCanvas from '@/components/model-viewer/SceneCanvas.vue'
+
+const defaultModel = modelOptions[0]!
 
 const sceneCanvas = useTemplateRef<InstanceType<typeof SceneCanvas>>('sceneCanvas')
 const isModelSelected = ref(false)
-const modelUrl = '/models/DamagedHelmet.glb'
+const selectedModelId = ref(defaultModel.id)
+const selectedModel = computed(() => {
+  return modelOptions.find(option => option.id === selectedModelId.value) ?? defaultModel
+})
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
 const modelLoadingState = ref<ModelLoadingState>({
@@ -41,13 +48,21 @@ function updatePointLightPosition(position: LightSettings['pointPosition']) {
 function resetView() {
   sceneCanvas.value?.resetCameraView()
 }
+
+watch(selectedModelId, () => {
+  isModelSelected.value = false
+  modelLoadingState.value = {
+    status: 'idle',
+    progress: 0,
+  }
+})
 </script>
 
 <template>
   <main class="home-view" aria-labelledby="model-viewer-title">
     <SceneCanvas
       ref="sceneCanvas"
-      :model-url="modelUrl"
+      :model-url="selectedModel.url"
       :model-color="modelColor"
       :light-settings="lightSettings"
       @model-loading-state-changed="modelLoadingState = $event"
@@ -60,8 +75,10 @@ function resetView() {
         <ModelInfoPanel
           :is-model-selected="isModelSelected"
           :loading-state="modelLoadingState"
+          :model-name="selectedModel.name"
           @reset-view="resetView"
         />
+        <ModelSelector v-model="selectedModelId" :options="modelOptions" />
         <ModelColorPicker
           v-if="modelLoadingState.status !== 'loaded'"
           v-model="modelColor"
