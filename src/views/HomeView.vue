@@ -68,11 +68,6 @@ const lightSettings = ref<LightSettings>({
   gap: 18px;
 }
 
-.viewer-primary-panel,
-.viewer-shell :deep(.light-panel) {
-  pointer-events: auto;
-}
-
 @media (width <= 760px) {
   .viewer-shell {
     inset: 16px;

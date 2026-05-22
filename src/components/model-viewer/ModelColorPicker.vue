@@ -44,6 +44,7 @@ const emit = defineEmits<{
 }
 
 .color-swatch {
+  pointer-events: auto;
   width: 28px;
   height: 28px;
   padding: 0;
