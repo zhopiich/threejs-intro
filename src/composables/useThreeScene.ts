@@ -8,8 +8,9 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { calculateCameraFit } from './three/cameraFit'
 import { normalizeToneMappingExposure } from './three/displaySettings'
 import { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
-import { collectObject3DResourceStats, disposeObject3DResources } from './three/modelResources'
+import { disposeObject3DResources } from './three/modelResources'
 import { useSceneLights } from './three/useSceneLights'
+import { useSceneModels } from './three/useSceneModels'
 
 export { calculateCameraFit } from './three/cameraFit'
 export { normalizeToneMappingExposure } from './three/displaySettings'
@@ -42,8 +43,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let renderer: THREE.WebGLRenderer | undefined
   let scene: THREE.Scene | undefined
   let camera: THREE.PerspectiveCamera | undefined
-  let placeholderMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
-  let loadedModel: THREE.Group | undefined
   let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
   let axesHelper: THREE.AxesHelper | undefined
   let gridHelper: THREE.GridHelper | undefined
@@ -55,13 +54,13 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let isDraggingPointLight = false
   let lastCameraFit: CameraFit | undefined
   let modelLoadId = 0
-  let selectableObjects: THREE.Object3D[] = []
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
   const dragPlane = new THREE.Plane()
   const dragHitPoint = new THREE.Vector3()
   const sceneLights = useSceneLights()
+  const sceneModels = useSceneModels(options)
 
   function getViewportSize() {
     return {
@@ -76,20 +75,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     camera.lookAt(0, 0.25, 0)
 
     return camera
-  }
-
-  function createPlaceholderMesh() {
-    const geometry = new THREE.BoxGeometry(1, 1, 1)
-    const material = new THREE.MeshStandardMaterial({
-      color: '#66a3ff',
-      roughness: 0.4,
-      metalness: 0.6,
-      wireframe: false,
-    })
-    const placeholderMesh = new THREE.Mesh(geometry, material)
-    placeholderMesh.castShadow = true
-
-    return placeholderMesh
   }
 
   function createGround() {
@@ -148,7 +133,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       }
     }
 
-    const hits = raycaster.intersectObjects(selectableObjects, true)
+    const hits = raycaster.intersectObjects(sceneModels.getSelectableObjects(), true)
 
     options.onModelSelected?.(getSelectedObjectInfo(hits[0]?.object))
   }
@@ -193,7 +178,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function setModelColor(color: string) {
-    placeholderMesh?.material.color.set(color)
+    sceneModels.setModelColor(color)
   }
 
   async function loadModel(url: string) {
@@ -219,16 +204,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
           return
         }
 
-        disposeLoadedModel()
-        disposePlaceholderMesh()
-
-        loadedModel = gltf.scene
-        normalizeLoadedModel(loadedModel)
-        prepareLoadedModel(loadedModel)
-
-        scene.add(loadedModel)
-        fitCameraToObject(loadedModel)
-        emitCurrentModelResourceStats()
+        sceneModels.setLoadedModel(scene, gltf.scene)
+        fitCameraToObject(gltf.scene)
         options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1, url })
       },
       (progressEvent) => {
@@ -255,38 +232,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     )
   }
 
-  function normalizeLoadedModel(model: THREE.Group) {
-    const box = new THREE.Box3().setFromObject(model)
-    const size = new THREE.Vector3()
-    const center = new THREE.Vector3()
-
-    box.getSize(size)
-    box.getCenter(center)
-
-    const maxAxis = Math.max(size.x, size.y, size.z)
-    const scale = maxAxis > 0 ? 1.8 / maxAxis : 1
-
-    model.scale.setScalar(scale)
-    model.position.set(
-      -center.x * scale,
-      -center.y * scale,
-      -center.z * scale,
-    )
-  }
-
-  function prepareLoadedModel(model: THREE.Group) {
-    selectableObjects = []
-
-    model.traverse((child) => {
-      if (!(child instanceof THREE.Mesh))
-        return
-
-      child.castShadow = true
-      child.receiveShadow = true
-      selectableObjects.push(child)
-    })
-  }
-
   function fitCameraToObject(object: THREE.Object3D) {
     if (!camera || !controls)
       return
@@ -310,34 +255,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
     controls.target.copy(lastCameraFit.center)
     controls.update()
-  }
-
-  function disposePlaceholderMesh() {
-    if (!placeholderMesh)
-      return
-
-    scene?.remove(placeholderMesh)
-    placeholderMesh.geometry.dispose()
-    placeholderMesh.material.dispose()
-    placeholderMesh = undefined
-    options.onPlaceholderVisibleChanged?.(false)
-  }
-
-  function disposeLoadedModel() {
-    if (!loadedModel)
-      return
-
-    scene?.remove(loadedModel)
-    disposeObject3DResources(loadedModel)
-    loadedModel = undefined
-    selectableObjects = placeholderMesh ? [placeholderMesh] : []
-    emitCurrentModelResourceStats()
-  }
-
-  function emitCurrentModelResourceStats() {
-    options.onModelResourceStatsChanged?.(
-      collectObject3DResourceStats(loadedModel ?? placeholderMesh),
-    )
   }
 
   function setLightSettings(settings: LightSettings) {
@@ -421,6 +338,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
       timer.update(timestamp)
       const elapsedTime = timer.getElapsed()
+      const placeholderMesh = sceneModels.getPlaceholderMesh()
       if (placeholderMesh) {
         placeholderMesh.position.y = Math.sin(elapsedTime * 1.5) * 0.3
         placeholderMesh.rotation.x = elapsedTime * 0.45
@@ -436,8 +354,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function disposeSceneResources() {
-    disposeLoadedModel()
-    disposePlaceholderMesh()
+    sceneModels.disposeLoadedModel(scene)
+    sceneModels.disposePlaceholderMesh(scene)
     scene?.environment?.dispose()
     if (scene)
       scene.environment = null
@@ -462,8 +380,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
   function resetSceneReferences() {
     animationId = undefined
-    placeholderMesh = undefined
-    loadedModel = undefined
+    sceneModels.resetReferences()
     ground = undefined
     sceneLights.resetReferences()
     axesHelper = undefined
@@ -475,7 +392,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     timer = undefined
     renderer = undefined
     canvas = undefined
-    selectableObjects = []
     isDraggingPointLight = false
     lastCameraFit = undefined
     modelLoadId += 1
@@ -491,11 +407,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     camera = createCamera(sizes.width, sizes.height)
     scene.add(camera)
 
-    placeholderMesh = createPlaceholderMesh()
-    scene.add(placeholderMesh)
-    selectableObjects = [placeholderMesh]
-    emitCurrentModelResourceStats()
-    options.onPlaceholderVisibleChanged?.(true)
+    sceneModels.addPlaceholderToScene(scene)
 
     ground = createGround()
     scene.add(ground)
