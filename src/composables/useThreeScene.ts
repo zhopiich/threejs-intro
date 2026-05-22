@@ -9,6 +9,7 @@ import { calculateCameraFit } from './three/cameraFit'
 import { normalizeToneMappingExposure } from './three/displaySettings'
 import { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
 import { disposeObject3DResources } from './three/modelResources'
+import { useSceneHelpers } from './three/useSceneHelpers'
 import { useSceneLights } from './three/useSceneLights'
 import { useSceneModels } from './three/useSceneModels'
 
@@ -43,9 +44,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let renderer: THREE.WebGLRenderer | undefined
   let scene: THREE.Scene | undefined
   let camera: THREE.PerspectiveCamera | undefined
-  let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
-  let axesHelper: THREE.AxesHelper | undefined
-  let gridHelper: THREE.GridHelper | undefined
   let environmentTexture: THREE.Texture | undefined
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
@@ -59,6 +57,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   const pointer = new THREE.Vector2()
   const dragPlane = new THREE.Plane()
   const dragHitPoint = new THREE.Vector3()
+  const sceneHelpers = useSceneHelpers()
   const sceneLights = useSceneLights()
   const sceneModels = useSceneModels(options)
 
@@ -75,25 +74,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     camera.lookAt(0, 0.25, 0)
 
     return camera
-  }
-
-  function createGround() {
-    const groundGeometry = new THREE.PlaneGeometry(7, 7)
-    const groundMaterial = new THREE.MeshStandardMaterial({ color: '#111118', roughness: 0.9 })
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-    ground.rotation.x = -Math.PI / 2
-    ground.position.y = -1
-    ground.receiveShadow = true
-
-    return ground
-  }
-
-  function addSceneHelpers(scene: THREE.Scene) {
-    axesHelper = new THREE.AxesHelper(2)
-    scene.add(axesHelper)
-
-    gridHelper = new THREE.GridHelper(7, 7, '#6b7280', '#2f3a46')
-    scene.add(gridHelper)
   }
 
   function updateRendererSize() {
@@ -265,15 +245,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     if (controls)
       controls.autoRotate = settings.autoRotate
 
-    if (axesHelper)
-      axesHelper.visible = settings.showAxesHelper
-
-    if (gridHelper)
-      gridHelper.visible = settings.showGridHelper
-
-    if (ground)
-      ground.visible = settings.showGround
-
+    sceneHelpers.setVisibility(settings)
     sceneLights.setPointLightHelperVisible(settings.showPointLightHelper)
 
     if (renderer)
@@ -360,19 +332,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     if (scene)
       scene.environment = null
     environmentTexture = undefined
+    sceneHelpers.dispose()
     sceneLights.dispose()
-    axesHelper?.geometry.dispose()
-    if (Array.isArray(axesHelper?.material))
-      axesHelper.material.forEach(material => material.dispose())
-    else
-      axesHelper?.material.dispose()
-    gridHelper?.geometry.dispose()
-    if (Array.isArray(gridHelper?.material))
-      gridHelper.material.forEach(material => material.dispose())
-    else
-      gridHelper?.material.dispose()
-    ground?.geometry.dispose()
-    ground?.material.dispose()
     controls?.dispose()
     timer?.dispose()
     renderer?.dispose()
@@ -381,10 +342,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   function resetSceneReferences() {
     animationId = undefined
     sceneModels.resetReferences()
-    ground = undefined
+    sceneHelpers.resetReferences()
     sceneLights.resetReferences()
-    axesHelper = undefined
-    gridHelper = undefined
     environmentTexture = undefined
     controls = undefined
     camera = undefined
@@ -409,11 +368,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
     sceneModels.addPlaceholderToScene(scene)
 
-    ground = createGround()
-    scene.add(ground)
-
+    sceneHelpers.addToScene(scene)
     sceneLights.addToScene(scene)
-    addSceneHelpers(scene)
 
     renderer = createRenderer(canvasElement, sizes.width, sizes.height)
     addEnvironmentLighting(scene, renderer)
