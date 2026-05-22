@@ -14,6 +14,8 @@ interface GlbModelOption {
 
 export type ModelOption = PlaceholderModelOption | GlbModelOption
 
+const modelAssetBaseUrl = `${import.meta.env.BASE_URL}models`
+
 export const modelOptions: ModelOption[] = [
   {
     id: 'placeholder-cube',
@@ -25,13 +27,13 @@ export const modelOptions: ModelOption[] = [
     name: 'Damaged Helmet',
     kind: 'glb',
     fileName: 'DamagedHelmet.glb',
-    url: '/models/DamagedHelmet.glb',
+    url: `${modelAssetBaseUrl}/DamagedHelmet.glb`,
   },
   {
     id: 'avocado',
     name: 'Avocado',
     kind: 'glb',
     fileName: 'Avocado.glb',
-    url: '/models/Avocado.glb',
+    url: `${modelAssetBaseUrl}/Avocado.glb`,
   },
 ]
