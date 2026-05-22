@@ -19,6 +19,7 @@ const emit = defineEmits<{
   modelResourceStatsChanged: [stats: ModelResourceStats]
   modelSelected: [selected: boolean]
   modelLoadingStateChanged: [state: ModelLoadingState]
+  placeholderVisibleChanged: [visible: boolean]
   pointLightPositionChanged: [position: LightSettings['pointPosition']]
 }>()
 
@@ -39,6 +40,9 @@ const {
   },
   onModelLoadingStateChanged(state) {
     emit('modelLoadingStateChanged', state)
+  },
+  onPlaceholderVisibleChanged(visible) {
+    emit('placeholderVisibleChanged', visible)
   },
   onPointLightPositionChanged(position) {
     emit('pointLightPositionChanged', position)

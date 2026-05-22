@@ -20,6 +20,7 @@ export interface ThreeSceneOptions {
   onModelResourceStatsChanged?: (stats: ModelResourceStats) => void
   onModelSelected?: (selected: boolean) => void
   onModelLoadingStateChanged?: (state: ModelLoadingState) => void
+  onPlaceholderVisibleChanged?: (visible: boolean) => void
   onPointLightPositionChanged?: (position: LightSettings['pointPosition']) => void
 }
 
@@ -447,6 +448,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     placeholderMesh.geometry.dispose()
     placeholderMesh.material.dispose()
     placeholderMesh = undefined
+    options.onPlaceholderVisibleChanged?.(false)
   }
 
   function disposeLoadedModel() {
@@ -619,6 +621,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     scene.add(placeholderMesh)
     selectableObjects = [placeholderMesh]
     emitCurrentModelResourceStats()
+    options.onPlaceholderVisibleChanged?.(true)
 
     ground = createGround()
     scene.add(ground)

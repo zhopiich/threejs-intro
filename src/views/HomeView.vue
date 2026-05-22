@@ -25,6 +25,7 @@ const selectedModel = computed(() => {
 })
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
+const isPlaceholderVisible = ref(false)
 const modelLoadingState = ref<ModelLoadingState>({
   status: 'idle',
   progress: 0,
@@ -78,6 +79,7 @@ watch(selectedModelId, () => {
       @model-loading-state-changed="modelLoadingState = $event"
       @model-resource-stats-changed="modelResourceStats = $event"
       @model-selected="isModelSelected = $event"
+      @placeholder-visible-changed="isPlaceholderVisible = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
 
@@ -92,7 +94,7 @@ watch(selectedModelId, () => {
         <ModelSelector v-model="selectedModelId" :options="modelOptions" />
         <ModelLifecycleStats :stats="modelResourceStats" />
         <ModelColorPicker
-          v-if="modelLoadingState.status !== 'loaded'"
+          v-if="isPlaceholderVisible"
           v-model="modelColor"
           :options="modelColorOptions"
         />
