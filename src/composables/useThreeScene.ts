@@ -1,63 +1,31 @@
+import type { CameraFit } from './three/cameraFit'
+import type { LightSettings, ThreeSceneOptions, ViewerDisplaySettings } from './three/sceneTypes'
+
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-export interface LightSettings {
-  ambientColor: string
-  ambientIntensity: number
-  directionalColor: string
-  directionalIntensity: number
-  pointColor: string
-  pointIntensity: number
-  pointPosition: {
-    x: number
-    y: number
-    z: number
-  }
-}
+import { calculateCameraFit } from './three/cameraFit'
+import { normalizeToneMappingExposure } from './three/displaySettings'
+import { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
+import { collectObject3DResourceStats, disposeObject3DResources } from './three/modelResources'
 
-export interface ViewerDisplaySettings {
-  autoRotate: boolean
-  showAxesHelper: boolean
-  showGridHelper: boolean
-  showGround: boolean
-  showPointLightHelper: boolean
-  toneMappingExposure: number
-}
-
-export interface ThreeSceneOptions {
-  onModelResourceStatsChanged?: (stats: ModelResourceStats) => void
-  onModelSelected?: (info: SelectedObjectInfo | undefined) => void
-  onModelLoadingStateChanged?: (state: ModelLoadingState) => void
-  onPlaceholderVisibleChanged?: (visible: boolean) => void
-  onPointLightPositionChanged?: (position: LightSettings['pointPosition']) => void
-}
-
-export interface ModelLoadingState {
-  status: 'idle' | 'loading' | 'loaded' | 'error'
-  progress: number
-  url?: string
-  errorMessage?: string
-}
-
-export interface ModelResourceStats {
-  meshCount: number
-  materialCount: number
-  textureCount: number
-}
-
-export interface SelectedObjectInfo {
-  objectName: string
-  materialName: string
-  geometryType: string
-}
-
-interface CameraFit {
-  center: THREE.Vector3
-  position: THREE.Vector3
-  near: number
-  far: number
-}
+export { calculateCameraFit } from './three/cameraFit'
+export { normalizeToneMappingExposure } from './three/displaySettings'
+export { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
+export {
+  collectObject3DResourceStats,
+  disposeMaterialResources,
+  disposeObject3DResources,
+} from './three/modelResources'
+export type {
+  LightSettings,
+  ModelLoadingState,
+  ModelResourceStats,
+  SelectedObjectInfo,
+  ThreeSceneOptions,
+  ViewerDisplaySettings,
+} from './three/sceneTypes'
 
 type GLTFLoaderModule = typeof import('three/examples/jsm/loaders/GLTFLoader.js')
 
@@ -67,113 +35,6 @@ function importGLTFLoader() {
   gltfLoaderModulePromise ??= import('three/examples/jsm/loaders/GLTFLoader.js')
 
   return gltfLoaderModulePromise
-}
-
-export function getHorizontalDragPosition(
-  currentPosition: LightSettings['pointPosition'],
-  hitPoint: THREE.Vector3,
-): LightSettings['pointPosition'] {
-  return {
-    x: hitPoint.x,
-    y: currentPosition.y,
-    z: hitPoint.z,
-  }
-}
-
-export function calculateCameraFit(
-  center: THREE.Vector3,
-  radius: number,
-  cameraFov: number,
-  direction = new THREE.Vector3(1, 0.65, 1),
-): CameraFit {
-  const safeRadius = Math.max(radius, 0.1)
-  const fov = THREE.MathUtils.degToRad(cameraFov)
-  const distance = (safeRadius / Math.sin(fov / 2)) * 1.15
-  const normalizedDirection = direction.clone().normalize()
-
-  return {
-    center: center.clone(),
-    position: center.clone().add(normalizedDirection.multiplyScalar(distance)),
-    near: Math.max(distance / 100, 0.01),
-    far: distance * 100,
-  }
-}
-
-export function getSelectedObjectInfo(object: THREE.Object3D | undefined): SelectedObjectInfo | undefined {
-  if (!(object instanceof THREE.Mesh))
-    return undefined
-
-  const material = Array.isArray(object.material) ? object.material[0] : object.material
-
-  return {
-    objectName: object.name || object.parent?.name || 'Unnamed mesh',
-    materialName: material?.name || material?.type || 'Unknown material',
-    geometryType: object.geometry?.type || 'Unknown geometry',
-  }
-}
-
-export function normalizeToneMappingExposure(exposure: number) {
-  return THREE.MathUtils.clamp(exposure, 0, 3)
-}
-
-export function disposeMaterialResources(material: THREE.Material) {
-  Object.values(material).forEach((value) => {
-    if (value instanceof THREE.Texture)
-      value.dispose()
-  })
-
-  material.dispose()
-}
-
-export function disposeObject3DResources(object: THREE.Object3D) {
-  object.traverse((child) => {
-    if (!(child instanceof THREE.Mesh))
-      return
-
-    child.geometry?.dispose()
-
-    if (Array.isArray(child.material))
-      child.material.forEach(disposeMaterialResources)
-    else if (child.material)
-      disposeMaterialResources(child.material)
-  })
-}
-
-export function collectObject3DResourceStats(object?: THREE.Object3D): ModelResourceStats {
-  const stats: ModelResourceStats = {
-    meshCount: 0,
-    materialCount: 0,
-    textureCount: 0,
-  }
-  const materials = new Set<THREE.Material>()
-  const textures = new Set<THREE.Texture>()
-
-  object?.traverse((child) => {
-    if (!(child instanceof THREE.Mesh))
-      return
-
-    stats.meshCount += 1
-
-    const childMaterials = Array.isArray(child.material)
-      ? child.material
-      : [child.material]
-
-    childMaterials.forEach((material) => {
-      if (!material || materials.has(material))
-        return
-
-      materials.add(material)
-      Object.values(material).forEach((value) => {
-        if (value instanceof THREE.Texture)
-          textures.add(value)
-      })
-    })
-  })
-
-  stats.materialCount = materials.size
-  stats.textureCount = textures.size
-
-  return stats
 }
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {

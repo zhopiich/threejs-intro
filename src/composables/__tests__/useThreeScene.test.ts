@@ -1,14 +1,10 @@
 import * as THREE from 'three'
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-  calculateCameraFit,
-  collectObject3DResourceStats,
-  disposeObject3DResources,
-  getHorizontalDragPosition,
-  getSelectedObjectInfo,
-  normalizeToneMappingExposure,
-} from '../useThreeScene'
+import { calculateCameraFit } from '../three/cameraFit'
+import { normalizeToneMappingExposure } from '../three/displaySettings'
+import { getHorizontalDragPosition, getSelectedObjectInfo } from '../three/interaction'
+import { collectObject3DResourceStats, disposeObject3DResources } from '../three/modelResources'
 
 describe('useThreeScene drag logic', () => {
   it('updates point light x/z from the drag hit point while preserving y', () => {
