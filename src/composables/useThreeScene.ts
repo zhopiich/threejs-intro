@@ -5,17 +5,17 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 import { normalizeToneMappingExposure } from './three/displaySettings'
-import { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
 import { getModelLoadErrorMessage, getModelLoadProgress, importGLTFLoader } from './three/modelLoading'
 import { disposeObject3DResources } from './three/modelResources'
 import { useSceneCamera } from './three/useSceneCamera'
 import { useSceneHelpers } from './three/useSceneHelpers'
+import { useSceneInteraction } from './three/useSceneInteraction'
 import { useSceneLights } from './three/useSceneLights'
 import { useSceneModels } from './three/useSceneModels'
 
 export { calculateCameraFit } from './three/cameraFit'
 export { normalizeToneMappingExposure } from './three/displaySettings'
-export { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
+export { getHorizontalDragPosition, getNormalizedPointerPosition, getSelectedObjectInfo } from './three/interaction'
 export {
   collectObject3DResourceStats,
   disposeMaterialResources,
@@ -41,12 +41,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let isDraggingPointLight = false
   let modelLoadId = 0
 
-  const raycaster = new THREE.Raycaster()
-  const pointer = new THREE.Vector2()
-  const dragPlane = new THREE.Plane()
-  const dragHitPoint = new THREE.Vector3()
   const sceneCamera = useSceneCamera()
   const sceneHelpers = useSceneHelpers()
+  const sceneInteraction = useSceneInteraction()
   const sceneLights = useSceneLights()
   const sceneModels = useSceneModels(options)
 
@@ -75,29 +72,26 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       return
 
     updatePointer(event)
-
-    raycaster.setFromCamera(pointer, camera)
+    sceneInteraction.setRayFromCamera(camera)
 
     const pointLight = sceneLights.getPointLight()
     const pointLightHandle = sceneLights.getPointLightHandle()
 
     if (pointLightHandle && pointLight) {
-      const lightHandleHits = raycaster.intersectObject(pointLightHandle)
-
-      if (lightHandleHits.length > 0) {
+      if (sceneInteraction.isObjectHit(pointLightHandle)) {
         isDraggingPointLight = true
         if (controls)
           controls.enabled = false
-        dragPlane.set(new THREE.Vector3(0, 1, 0), -pointLight.position.y)
+        sceneInteraction.setHorizontalDragPlane(pointLight.position.y)
         canvas.setPointerCapture(event.pointerId)
         options.onModelSelected?.(undefined)
         return
       }
     }
 
-    const hits = raycaster.intersectObjects(sceneModels.getSelectableObjects(), true)
-
-    options.onModelSelected?.(getSelectedObjectInfo(hits[0]?.object))
+    options.onModelSelected?.(
+      sceneInteraction.getSelectedObjectInfo(sceneModels.getSelectableObjects()),
+    )
   }
 
   function handleCanvasPointerMove(event: PointerEvent) {
@@ -109,12 +103,12 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       return
 
     updatePointer(event)
-    raycaster.setFromCamera(pointer, camera)
+    sceneInteraction.setRayFromCamera(camera)
 
-    if (!raycaster.ray.intersectPlane(dragPlane, dragHitPoint))
+    const nextPosition = sceneInteraction.getPointLightDragPosition(pointLight.position)
+    if (!nextPosition)
       return
 
-    const nextPosition = getHorizontalDragPosition(pointLight.position, dragHitPoint)
     sceneLights.setPointLightPosition(nextPosition)
     options.onPointLightPositionChanged?.(nextPosition)
   }
@@ -136,8 +130,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       return
 
     const rect = canvas.getBoundingClientRect()
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    sceneInteraction.updatePointer(event.clientX, event.clientY, rect)
   }
 
   function setModelColor(color: string) {

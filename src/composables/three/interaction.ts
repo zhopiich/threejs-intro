@@ -13,6 +13,13 @@ export function getHorizontalDragPosition(
   }
 }
 
+export function getNormalizedPointerPosition(clientX: number, clientY: number, rect: DOMRect) {
+  return {
+    x: ((clientX - rect.left) / rect.width) * 2 - 1,
+    y: -((clientY - rect.top) / rect.height) * 2 + 1,
+  }
+}
+
 export function getSelectedObjectInfo(object: THREE.Object3D | undefined): SelectedObjectInfo | undefined {
   if (!(object instanceof THREE.Mesh))
     return undefined

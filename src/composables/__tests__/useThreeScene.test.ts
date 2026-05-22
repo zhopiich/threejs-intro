@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { calculateCameraFit } from '../three/cameraFit'
 import { normalizeToneMappingExposure } from '../three/displaySettings'
-import { getHorizontalDragPosition, getSelectedObjectInfo } from '../three/interaction'
+import { getHorizontalDragPosition, getNormalizedPointerPosition, getSelectedObjectInfo } from '../three/interaction'
 import { collectObject3DResourceStats, disposeObject3DResources } from '../three/modelResources'
 
 describe('useThreeScene drag logic', () => {
@@ -15,6 +15,24 @@ describe('useThreeScene drag logic', () => {
       x: 1.25,
       y: 1.6,
       z: -2.75,
+    })
+  })
+
+  it('normalizes pointer coordinates into Three.js device coordinates', () => {
+    const rect = {
+      left: 100,
+      top: 50,
+      width: 400,
+      height: 200,
+    } as DOMRect
+
+    expect(getNormalizedPointerPosition(300, 150, rect)).toEqual({
+      x: 0,
+      y: 0,
+    })
+    expect(getNormalizedPointerPosition(100, 50, rect)).toEqual({
+      x: -1,
+      y: 1,
     })
   })
 
