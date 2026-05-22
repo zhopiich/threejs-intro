@@ -1,10 +1,7 @@
 import type { LightSettings, ThreeSceneOptions, ViewerDisplaySettings } from './three/sceneTypes'
 
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-import { normalizeToneMappingExposure } from './three/displaySettings'
 import { getModelLoadErrorMessage, getModelLoadProgress, importGLTFLoader } from './three/modelLoading'
 import { disposeObject3DResources } from './three/modelResources'
 import { useSceneCamera } from './three/useSceneCamera'
@@ -12,6 +9,7 @@ import { useSceneHelpers } from './three/useSceneHelpers'
 import { useSceneInteraction } from './three/useSceneInteraction'
 import { useSceneLights } from './three/useSceneLights'
 import { useSceneModels } from './three/useSceneModels'
+import { useSceneRenderer } from './three/useSceneRenderer'
 
 export { calculateCameraFit } from './three/cameraFit'
 export { normalizeToneMappingExposure } from './three/displaySettings'
@@ -31,10 +29,7 @@ export type {
 } from './three/sceneTypes'
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {
-  let renderer: THREE.WebGLRenderer | undefined
   let scene: THREE.Scene | undefined
-  let environmentTexture: THREE.Texture | undefined
-  let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
   let animationId: number | undefined
   let canvas: HTMLCanvasElement | undefined
@@ -46,6 +41,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   const sceneInteraction = useSceneInteraction()
   const sceneLights = useSceneLights()
   const sceneModels = useSceneModels(options)
+  const sceneRenderer = useSceneRenderer()
 
   function getViewportSize() {
     return {
@@ -55,14 +51,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function updateRendererSize() {
-    if (!renderer)
-      return
-
     const { width, height } = getViewportSize()
 
     sceneCamera.updateViewport(width, height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(width, height)
+    sceneRenderer.updateViewport(width, height)
   }
 
   function handleCanvasPointerDown(event: PointerEvent) {
@@ -80,8 +72,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     if (pointLightHandle && pointLight) {
       if (sceneInteraction.isObjectHit(pointLightHandle)) {
         isDraggingPointLight = true
-        if (controls)
-          controls.enabled = false
+        sceneRenderer.setControlsEnabled(false)
         sceneInteraction.setHorizontalDragPlane(pointLight.position.y)
         canvas.setPointerCapture(event.pointerId)
         options.onModelSelected?.(undefined)
@@ -118,8 +109,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       return
 
     isDraggingPointLight = false
-    if (controls)
-      controls.enabled = true
+    sceneRenderer.setControlsEnabled(true)
 
     if (canvas?.hasPointerCapture(event.pointerId))
       canvas.releasePointerCapture(event.pointerId)
@@ -161,6 +151,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         }
 
         sceneModels.setLoadedModel(scene, gltf.scene)
+        const controls = sceneRenderer.getControls()
         if (controls)
           sceneCamera.fitCameraToObject(gltf.scene, controls)
         options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1, url })
@@ -190,6 +181,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function resetCameraView() {
+    const controls = sceneRenderer.getControls()
+
     if (!controls)
       return
 
@@ -201,49 +194,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function setViewerDisplaySettings(settings: ViewerDisplaySettings) {
-    if (controls)
-      controls.autoRotate = settings.autoRotate
-
+    sceneRenderer.setControlsAutoRotate(settings.autoRotate)
     sceneHelpers.setVisibility(settings)
     sceneLights.setPointLightHelperVisible(settings.showPointLightHelper)
-
-    if (renderer)
-      renderer.toneMappingExposure = normalizeToneMappingExposure(settings.toneMappingExposure)
-  }
-
-  function createRenderer(canvasElement: HTMLCanvasElement, width: number, height: number) {
-    const renderer = new THREE.WebGLRenderer({
-      canvas: canvasElement,
-      antialias: true,
-    })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(width, height)
-    renderer.shadowMap.enabled = true
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1
-
-    return renderer
-  }
-
-  function addEnvironmentLighting(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
-    const pmremGenerator = new THREE.PMREMGenerator(renderer)
-    const roomEnvironment = new RoomEnvironment()
-
-    environmentTexture = pmremGenerator.fromScene(roomEnvironment).texture
-    scene.environment = environmentTexture
-
-    roomEnvironment.dispose()
-    pmremGenerator.dispose()
-  }
-
-  function createControls(camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer) {
-    const controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
-    controls.target.set(0, 0, 0)
-    controls.update()
-
-    return controls
+    sceneRenderer.setToneMappingExposure(settings.toneMappingExposure)
   }
 
   function addEventListeners() {
@@ -266,7 +220,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     function animate(timestamp: number) {
       const camera = sceneCamera.getCamera()
 
-      if (!renderer || !scene || !camera || !timer)
+      if (!sceneRenderer.getRenderer() || !scene || !camera || !timer)
         return
 
       timer.update(timestamp)
@@ -278,8 +232,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         placeholderMesh.rotation.y = elapsedTime * 0.8
       }
 
-      controls?.update()
-      renderer.render(scene, camera)
+      sceneRenderer.updateControls()
+      sceneRenderer.render(scene, camera)
       animationId = window.requestAnimationFrame(animate)
     }
 
@@ -289,15 +243,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   function disposeSceneResources() {
     sceneModels.disposeLoadedModel(scene)
     sceneModels.disposePlaceholderMesh(scene)
-    scene?.environment?.dispose()
-    if (scene)
-      scene.environment = null
-    environmentTexture = undefined
     sceneHelpers.dispose()
     sceneLights.dispose()
-    controls?.dispose()
+    sceneRenderer.dispose(scene)
     timer?.dispose()
-    renderer?.dispose()
   }
 
   function resetSceneReferences() {
@@ -305,12 +254,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     sceneModels.resetReferences()
     sceneHelpers.resetReferences()
     sceneLights.resetReferences()
-    environmentTexture = undefined
-    controls = undefined
     sceneCamera.resetReferences()
     scene = undefined
     timer = undefined
-    renderer = undefined
     canvas = undefined
     isDraggingPointLight = false
     modelLoadId += 1
@@ -333,9 +279,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     sceneHelpers.addToScene(scene)
     sceneLights.addToScene(scene)
 
-    renderer = createRenderer(canvasElement, sizes.width, sizes.height)
-    addEnvironmentLighting(scene, renderer)
-    controls = createControls(camera, renderer)
+    sceneRenderer.createRenderer(canvasElement, sizes.width, sizes.height)
+    sceneRenderer.addEnvironmentLighting(scene)
+    sceneRenderer.createControls(camera)
     addEventListeners()
 
     timer = new THREE.Timer()
