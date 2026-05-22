@@ -68,6 +68,7 @@ function updatePointLightPosition(position: LightSettings['pointPosition']) {
   justify-content: space-between;
   gap: 24px;
   pointer-events: none;
+  user-select: none;
 }
 
 .viewer-primary-panel {

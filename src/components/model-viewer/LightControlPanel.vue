@@ -143,6 +143,7 @@ function updatePointPosition(
   border: 1px solid rgb(255 255 255 / 16%);
   border-radius: 8px;
   backdrop-filter: blur(16px);
+  pointer-events: auto;
 }
 
 .control-row {
