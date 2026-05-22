@@ -18,7 +18,14 @@ const emit = defineEmits<{
 }>()
 
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
-const { init, dispose, loadModel, setLightSettings, setModelColor } = useThreeScene({
+const {
+  init,
+  dispose,
+  loadModel,
+  resetCameraView,
+  setLightSettings,
+  setModelColor,
+} = useThreeScene({
   onModelSelected(selected) {
     emit('modelSelected', selected)
   },
@@ -54,6 +61,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   dispose()
+})
+
+defineExpose({
+  resetCameraView,
 })
 </script>
 

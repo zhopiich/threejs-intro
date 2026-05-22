@@ -5,6 +5,10 @@ defineProps<{
   isModelSelected: boolean
   loadingState: ModelLoadingState
 }>()
+
+const emit = defineEmits<{
+  resetView: []
+}>()
 </script>
 
 <template>
@@ -32,6 +36,9 @@ defineProps<{
         Placeholder ready
       </template>
     </p>
+    <button class="reset-button" type="button" @click="emit('resetView')">
+      Reset view
+    </button>
   </section>
 </template>
 
@@ -68,5 +75,22 @@ h1 {
   max-width: 28rem;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.reset-button {
+  margin-top: 12px;
+  padding: 7px 12px;
+  color: #f6f8fb;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgb(255 255 255 / 12%);
+  border: 1px solid rgb(255 255 255 / 26%);
+  border-radius: 6px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.reset-button:hover {
+  background: rgb(255 255 255 / 18%);
 }
 </style>

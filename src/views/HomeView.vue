@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { LightSettings, ModelLoadingState } from '@/composables/useThreeScene'
 
-import { ref } from 'vue'
+import { ref, useTemplateRef } from 'vue'
 
 import LightControlPanel from '@/components/model-viewer/LightControlPanel.vue'
 import ModelColorPicker from '@/components/model-viewer/ModelColorPicker.vue'
 import ModelInfoPanel from '@/components/model-viewer/ModelInfoPanel.vue'
 import SceneCanvas from '@/components/model-viewer/SceneCanvas.vue'
 
+const sceneCanvas = useTemplateRef<InstanceType<typeof SceneCanvas>>('sceneCanvas')
 const isModelSelected = ref(false)
 const modelUrl = '/models/DamagedHelmet.glb'
 const modelColor = ref('#66a3ff')
@@ -36,11 +37,16 @@ function updatePointLightPosition(position: LightSettings['pointPosition']) {
     pointPosition: position,
   }
 }
+
+function resetView() {
+  sceneCanvas.value?.resetCameraView()
+}
 </script>
 
 <template>
   <main class="home-view" aria-labelledby="model-viewer-title">
     <SceneCanvas
+      ref="sceneCanvas"
       :model-url="modelUrl"
       :model-color="modelColor"
       :light-settings="lightSettings"
@@ -54,6 +60,7 @@ function updatePointLightPosition(position: LightSettings['pointPosition']) {
         <ModelInfoPanel
           :is-model-selected="isModelSelected"
           :loading-state="modelLoadingState"
+          @reset-view="resetView"
         />
         <ModelColorPicker
           v-if="modelLoadingState.status !== 'loaded'"
