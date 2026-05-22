@@ -27,6 +27,7 @@ export interface ThreeSceneOptions {
 export interface ModelLoadingState {
   status: 'idle' | 'loading' | 'loaded' | 'error'
   progress: number
+  url?: string
   errorMessage?: string
 }
 
@@ -331,7 +332,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
     const currentLoadId = modelLoadId + 1
     modelLoadId = currentLoadId
-    options.onModelLoadingStateChanged?.({ status: 'loading', progress: 0 })
+    options.onModelLoadingStateChanged?.({ status: 'loading', progress: 0, url })
 
     const { GLTFLoader } = await importGLTFLoader()
 
@@ -358,7 +359,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         scene.add(loadedModel)
         fitCameraToObject(loadedModel)
         emitCurrentModelResourceStats()
-        options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1 })
+        options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1, url })
       },
       (progressEvent) => {
         if (currentLoadId !== modelLoadId)
@@ -368,7 +369,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
           ? progressEvent.loaded / progressEvent.total
           : 0
 
-        options.onModelLoadingStateChanged?.({ status: 'loading', progress })
+        options.onModelLoadingStateChanged?.({ status: 'loading', progress, url })
       },
       (error) => {
         if (currentLoadId !== modelLoadId)
@@ -377,6 +378,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         options.onModelLoadingStateChanged?.({
           status: 'error',
           progress: 0,
+          url,
           errorMessage: error instanceof Error ? error.message : 'Failed to load model',
         })
       },

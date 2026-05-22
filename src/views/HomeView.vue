@@ -23,6 +23,10 @@ const selectedModelId = ref(defaultModel.id)
 const selectedModel = computed(() => {
   return modelOptions.find(option => option.id === selectedModelId.value) ?? defaultModel
 })
+const displayedModelUrl = ref<string>()
+const displayedModel = computed(() => {
+  return modelOptions.find(option => option.url === displayedModelUrl.value)
+})
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
 const isPlaceholderVisible = ref(false)
@@ -60,6 +64,13 @@ function resetView() {
   sceneCanvas.value?.resetCameraView()
 }
 
+function updateModelLoadingState(state: ModelLoadingState) {
+  modelLoadingState.value = state
+
+  if (state.status === 'loaded' && state.url)
+    displayedModelUrl.value = state.url
+}
+
 watch(selectedModelId, () => {
   isModelSelected.value = false
   modelLoadingState.value = {
@@ -76,7 +87,7 @@ watch(selectedModelId, () => {
       :model-url="selectedModel.url"
       :model-color="modelColor"
       :light-settings="lightSettings"
-      @model-loading-state-changed="modelLoadingState = $event"
+      @model-loading-state-changed="updateModelLoadingState"
       @model-resource-stats-changed="modelResourceStats = $event"
       @model-selected="isModelSelected = $event"
       @placeholder-visible-changed="isPlaceholderVisible = $event"
@@ -88,7 +99,8 @@ watch(selectedModelId, () => {
         <ModelInfoPanel
           :is-model-selected="isModelSelected"
           :loading-state="modelLoadingState"
-          :model-name="selectedModel.name"
+          :requested-model-name="selectedModel.name"
+          :displayed-model-name="displayedModel?.name"
           @reset-view="resetView"
         />
         <ModelSelector v-model="selectedModelId" :options="modelOptions" />
