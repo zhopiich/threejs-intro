@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import type { LightSettings, ModelLoadingState } from '@/composables/useThreeScene'
+import type {
+  LightSettings,
+  ModelLoadingState,
+  ModelResourceStats,
+} from '@/composables/useThreeScene'
 
 import { computed, ref, useTemplateRef, watch } from 'vue'
 
 import LightControlPanel from '@/components/model-viewer/LightControlPanel.vue'
 import ModelColorPicker from '@/components/model-viewer/ModelColorPicker.vue'
 import ModelInfoPanel from '@/components/model-viewer/ModelInfoPanel.vue'
+import ModelLifecycleStats from '@/components/model-viewer/ModelLifecycleStats.vue'
 import { modelOptions } from '@/components/model-viewer/modelOptions'
 import ModelSelector from '@/components/model-viewer/ModelSelector.vue'
 import SceneCanvas from '@/components/model-viewer/SceneCanvas.vue'
@@ -23,6 +28,11 @@ const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
 const modelLoadingState = ref<ModelLoadingState>({
   status: 'idle',
   progress: 0,
+})
+const modelResourceStats = ref<ModelResourceStats>({
+  meshCount: 0,
+  materialCount: 0,
+  textureCount: 0,
 })
 const lightSettings = ref<LightSettings>({
   ambientColor: '#ffffff',
@@ -55,6 +65,11 @@ watch(selectedModelId, () => {
     status: 'idle',
     progress: 0,
   }
+  modelResourceStats.value = {
+    meshCount: 0,
+    materialCount: 0,
+    textureCount: 0,
+  }
 })
 </script>
 
@@ -66,6 +81,7 @@ watch(selectedModelId, () => {
       :model-color="modelColor"
       :light-settings="lightSettings"
       @model-loading-state-changed="modelLoadingState = $event"
+      @model-resource-stats-changed="modelResourceStats = $event"
       @model-selected="isModelSelected = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
@@ -79,6 +95,7 @@ watch(selectedModelId, () => {
           @reset-view="resetView"
         />
         <ModelSelector v-model="selectedModelId" :options="modelOptions" />
+        <ModelLifecycleStats :stats="modelResourceStats" />
         <ModelColorPicker
           v-if="modelLoadingState.status !== 'loaded'"
           v-model="modelColor"

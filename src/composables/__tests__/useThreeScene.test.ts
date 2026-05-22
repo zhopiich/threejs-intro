@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   calculateCameraFit,
+  collectObject3DResourceStats,
   disposeObject3DResources,
   getHorizontalDragPosition,
 } from '../useThreeScene'
@@ -46,5 +47,21 @@ describe('useThreeScene drag logic', () => {
     expect(disposeGeometry).toHaveBeenCalledOnce()
     expect(disposeMaterial).toHaveBeenCalledOnce()
     expect(disposeTexture).toHaveBeenCalledOnce()
+  })
+
+  it('collects unique mesh, material, and texture counts for lifecycle debugging', () => {
+    const sharedTexture = new THREE.Texture()
+    const sharedMaterial = new THREE.MeshStandardMaterial({ map: sharedTexture })
+    const firstMesh = new THREE.Mesh(new THREE.BoxGeometry(), sharedMaterial)
+    const secondMesh = new THREE.Mesh(new THREE.SphereGeometry(), sharedMaterial)
+    const group = new THREE.Group()
+
+    group.add(firstMesh, secondMesh)
+
+    expect(collectObject3DResourceStats(group)).toEqual({
+      meshCount: 2,
+      materialCount: 1,
+      textureCount: 1,
+    })
   })
 })

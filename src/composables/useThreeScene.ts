@@ -17,6 +17,7 @@ export interface LightSettings {
 }
 
 export interface ThreeSceneOptions {
+  onModelResourceStatsChanged?: (stats: ModelResourceStats) => void
   onModelSelected?: (selected: boolean) => void
   onModelLoadingStateChanged?: (state: ModelLoadingState) => void
   onPointLightPositionChanged?: (position: LightSettings['pointPosition']) => void
@@ -26,6 +27,12 @@ export interface ModelLoadingState {
   status: 'idle' | 'loading' | 'loaded' | 'error'
   progress: number
   errorMessage?: string
+}
+
+export interface ModelResourceStats {
+  meshCount: number
+  materialCount: number
+  textureCount: number
 }
 
 interface CameraFit {
@@ -96,6 +103,43 @@ export function disposeObject3DResources(object: THREE.Object3D) {
     else if (child.material)
       disposeMaterialResources(child.material)
   })
+}
+
+export function collectObject3DResourceStats(object?: THREE.Object3D): ModelResourceStats {
+  const stats: ModelResourceStats = {
+    meshCount: 0,
+    materialCount: 0,
+    textureCount: 0,
+  }
+  const materials = new Set<THREE.Material>()
+  const textures = new Set<THREE.Texture>()
+
+  object?.traverse((child) => {
+    if (!(child instanceof THREE.Mesh))
+      return
+
+    stats.meshCount += 1
+
+    const childMaterials = Array.isArray(child.material)
+      ? child.material
+      : [child.material]
+
+    childMaterials.forEach((material) => {
+      if (!material || materials.has(material))
+        return
+
+      materials.add(material)
+      Object.values(material).forEach((value) => {
+        if (value instanceof THREE.Texture)
+          textures.add(value)
+      })
+    })
+  })
+
+  stats.materialCount = materials.size
+  stats.textureCount = textures.size
+
+  return stats
 }
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {
@@ -312,6 +356,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
         scene.add(loadedModel)
         fitCameraToObject(loadedModel)
+        emitCurrentModelResourceStats()
         options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1 })
       },
       (progressEvent) => {
@@ -412,6 +457,13 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     disposeObject3DResources(loadedModel)
     loadedModel = undefined
     selectableObjects = placeholderMesh ? [placeholderMesh] : []
+    emitCurrentModelResourceStats()
+  }
+
+  function emitCurrentModelResourceStats() {
+    options.onModelResourceStatsChanged?.(
+      collectObject3DResourceStats(loadedModel ?? placeholderMesh),
+    )
   }
 
   function setLightSettings(settings: LightSettings) {
@@ -566,6 +618,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     placeholderMesh = createPlaceholderMesh()
     scene.add(placeholderMesh)
     selectableObjects = [placeholderMesh]
+    emitCurrentModelResourceStats()
 
     ground = createGround()
     scene.add(ground)
