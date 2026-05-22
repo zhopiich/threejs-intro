@@ -2,14 +2,14 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 export interface ThreeSceneOptions {
-  onCubeSelected?: (selected: boolean) => void
+  onModelSelected?: (selected: boolean) => void
 }
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {
   let renderer: THREE.WebGLRenderer | undefined
   let scene: THREE.Scene | undefined
   let camera: THREE.PerspectiveCamera | undefined
-  let cube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
+  let modelMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
   let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
   let pointLightHelper: THREE.PointLightHelper | undefined
   let controls: OrbitControls | undefined
@@ -35,7 +35,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     return camera
   }
 
-  function createCube() {
+  function createModelPlaceholder() {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
     const material = new THREE.MeshStandardMaterial({
       color: '#66a3ff',
@@ -43,10 +43,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       metalness: 0.6,
       wireframe: false,
     })
-    const cube = new THREE.Mesh(geometry, material)
-    cube.castShadow = true
+    const modelMesh = new THREE.Mesh(geometry, material)
+    modelMesh.castShadow = true
 
-    return cube
+    return modelMesh
   }
 
   function createGround() {
@@ -98,7 +98,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function handleCanvasPointerDown(event: PointerEvent) {
-    if (!canvas || !camera || !cube)
+    if (!canvas || !camera || !modelMesh)
       return
 
     const rect = canvas.getBoundingClientRect()
@@ -106,13 +106,13 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
 
     raycaster.setFromCamera(pointer, camera)
-    const hits = raycaster.intersectObject(cube)
+    const hits = raycaster.intersectObject(modelMesh)
 
-    options.onCubeSelected?.(hits.length > 0)
+    options.onModelSelected?.(hits.length > 0)
   }
 
-  function setCubeColor(color: string) {
-    cube?.material.color.set(color)
+  function setModelColor(color: string) {
+    modelMesh?.material.color.set(color)
   }
 
   function createRenderer(canvasElement: HTMLCanvasElement, width: number, height: number) {
@@ -148,14 +148,14 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
   function startAnimationLoop() {
     function animate(timestamp: number) {
-      if (!renderer || !scene || !camera || !cube || !timer)
+      if (!renderer || !scene || !camera || !modelMesh || !timer)
         return
 
       timer.update(timestamp)
       const elapsedTime = timer.getElapsed()
-      cube.position.y = Math.sin(elapsedTime * 1.5) * 0.3
-      cube.rotation.x = elapsedTime * 0.45
-      cube.rotation.y = elapsedTime * 0.8
+      modelMesh.position.y = Math.sin(elapsedTime * 1.5) * 0.3
+      modelMesh.rotation.x = elapsedTime * 0.45
+      modelMesh.rotation.y = elapsedTime * 0.8
 
       controls?.update()
       renderer.render(scene, camera)
@@ -166,8 +166,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function disposeSceneResources() {
-    cube?.geometry.dispose()
-    cube?.material.dispose()
+    modelMesh?.geometry.dispose()
+    modelMesh?.material.dispose()
     ground?.geometry.dispose()
     ground?.material.dispose()
     pointLightHelper?.dispose()
@@ -178,7 +178,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
   function resetSceneReferences() {
     animationId = undefined
-    cube = undefined
+    modelMesh = undefined
     ground = undefined
     pointLightHelper = undefined
     controls = undefined
@@ -199,8 +199,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     camera = createCamera(sizes.width, sizes.height)
     scene.add(camera)
 
-    cube = createCube()
-    scene.add(cube)
+    modelMesh = createModelPlaceholder()
+    scene.add(modelMesh)
 
     ground = createGround()
     scene.add(ground)
@@ -227,5 +227,5 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     resetSceneReferences()
   }
 
-  return { init, dispose, setCubeColor }
+  return { init, dispose, setModelColor }
 }

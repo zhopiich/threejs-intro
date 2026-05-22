@@ -4,17 +4,17 @@ import { onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 import { useThreeScene } from '@/composables/useThreeScene'
 
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
-const isCubeSelected = ref(false)
-const cubeColor = ref('#66a3ff')
-const cubeColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
-const { init, dispose, setCubeColor } = useThreeScene({
-  onCubeSelected(selected) {
-    isCubeSelected.value = selected
+const isModelSelected = ref(false)
+const modelColor = ref('#66a3ff')
+const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
+const { init, dispose, setModelColor } = useThreeScene({
+  onModelSelected(selected) {
+    isModelSelected.value = selected
   },
 })
 
-watch(cubeColor, (color) => {
-  setCubeColor(color)
+watch(modelColor, (color) => {
+  setModelColor(color)
 })
 
 onMounted(() => {
@@ -30,24 +30,24 @@ onUnmounted(() => {
 <template>
   <main class="home-view" aria-labelledby="page-title">
     <div class="scene-label">
-      <p>Three.js Phase 1</p>
+      <p>Three.js Phase 3</p>
       <h1 id="page-title">
-        Floating Cube With Three Lights
+        Model Viewer Placeholder
       </h1>
       <p class="selection-status">
-        {{ isCubeSelected ? 'Cube selected' : 'Click the cube' }}
+        {{ isModelSelected ? 'Model selected' : 'Click the model' }}
       </p>
       <fieldset class="color-controls">
-        <legend>Cube color</legend>
+        <legend>Model color</legend>
         <button
-          v-for="color in cubeColorOptions"
+          v-for="color in modelColorOptions"
           :key="color"
           class="color-swatch"
-          :class="{ 'is-active': color === cubeColor }"
+          :class="{ 'is-active': color === modelColor }"
           :style="{ backgroundColor: color }"
           type="button"
-          :aria-label="`Set cube color to ${color}`"
-          @click="cubeColor = color"
+          :aria-label="`Set model color to ${color}`"
+          @click="modelColor = color"
         />
       </fieldset>
     </div>
