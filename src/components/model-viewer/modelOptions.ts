@@ -12,4 +12,10 @@ export const modelOptions: ModelOption[] = [
     fileName: 'DamagedHelmet.glb',
     url: '/models/DamagedHelmet.glb',
   },
+  {
+    id: 'avocado',
+    name: 'Avocado',
+    fileName: 'Avocado.glb',
+    url: '/models/Avocado.glb',
+  },
 ]
