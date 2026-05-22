@@ -39,6 +39,9 @@ const modelResourceStats = ref<ModelResourceStats>({
   materialCount: 0,
   textureCount: 0,
 })
+const loadingModel = computed(() => {
+  return modelOptions.find(option => option.url === modelLoadingState.value.url)
+})
 const lightSettings = ref<LightSettings>({
   ambientColor: '#ffffff',
   ambientIntensity: 0.2,
@@ -73,10 +76,6 @@ function updateModelLoadingState(state: ModelLoadingState) {
 
 watch(selectedModelId, () => {
   isModelSelected.value = false
-  modelLoadingState.value = {
-    status: 'idle',
-    progress: 0,
-  }
 })
 </script>
 
@@ -99,7 +98,7 @@ watch(selectedModelId, () => {
         <ModelInfoPanel
           :is-model-selected="isModelSelected"
           :loading-state="modelLoadingState"
-          :requested-model-name="selectedModel.name"
+          :requested-model-name="loadingModel?.name ?? selectedModel.name"
           :displayed-model-name="displayedModel?.name"
           @reset-view="resetView"
         />

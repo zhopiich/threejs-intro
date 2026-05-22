@@ -35,7 +35,10 @@ const emit = defineEmits<{
         {{ displayedModelName ?? requestedModelName }} loaded
       </template>
       <template v-else-if="loadingState.status === 'error'">
-        {{ loadingState.errorMessage ?? 'Failed to load model' }}
+        Failed to load {{ requestedModelName }}
+        <span v-if="loadingState.errorMessage">
+          - {{ loadingState.errorMessage }}
+        </span>
         <span v-if="displayedModelName">
           - Showing {{ displayedModelName }}
         </span>
