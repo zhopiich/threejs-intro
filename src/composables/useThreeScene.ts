@@ -4,6 +4,7 @@ import * as THREE from 'three'
 
 import { getModelLoadErrorMessage, getModelLoadProgress, importGLTFLoader } from './three/modelLoading'
 import { disposeObject3DResources } from './three/modelResources'
+import { useSceneAnimationLoop } from './three/useSceneAnimationLoop'
 import { useSceneCamera } from './three/useSceneCamera'
 import { useSceneHelpers } from './three/useSceneHelpers'
 import { useSceneInteraction } from './three/useSceneInteraction'
@@ -30,12 +31,11 @@ export type {
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {
   let scene: THREE.Scene | undefined
-  let timer: THREE.Timer | undefined
-  let animationId: number | undefined
   let canvas: HTMLCanvasElement | undefined
   let isDraggingPointLight = false
   let modelLoadId = 0
 
+  const sceneAnimationLoop = useSceneAnimationLoop()
   const sceneCamera = useSceneCamera()
   const sceneHelpers = useSceneHelpers()
   const sceneInteraction = useSceneInteraction()
@@ -217,14 +217,12 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function startAnimationLoop() {
-    function animate(timestamp: number) {
+    sceneAnimationLoop.start((elapsedTime) => {
       const camera = sceneCamera.getCamera()
 
-      if (!sceneRenderer.getRenderer() || !scene || !camera || !timer)
-        return
+      if (!sceneRenderer.getRenderer() || !scene || !camera)
+        return false
 
-      timer.update(timestamp)
-      const elapsedTime = timer.getElapsed()
       const placeholderMesh = sceneModels.getPlaceholderMesh()
       if (placeholderMesh) {
         placeholderMesh.position.y = Math.sin(elapsedTime * 1.5) * 0.3
@@ -234,10 +232,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
       sceneRenderer.updateControls()
       sceneRenderer.render(scene, camera)
-      animationId = window.requestAnimationFrame(animate)
-    }
-
-    animationId = window.requestAnimationFrame(animate)
+    })
   }
 
   function disposeSceneResources() {
@@ -246,17 +241,14 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     sceneHelpers.dispose()
     sceneLights.dispose()
     sceneRenderer.dispose(scene)
-    timer?.dispose()
   }
 
   function resetSceneReferences() {
-    animationId = undefined
     sceneModels.resetReferences()
     sceneHelpers.resetReferences()
     sceneLights.resetReferences()
     sceneCamera.resetReferences()
     scene = undefined
-    timer = undefined
     canvas = undefined
     isDraggingPointLight = false
     modelLoadId += 1
@@ -284,16 +276,11 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     sceneRenderer.createControls(camera)
     addEventListeners()
 
-    timer = new THREE.Timer()
-    timer.connect(document)
-
     startAnimationLoop()
   }
 
   function dispose() {
-    if (animationId !== undefined)
-      window.cancelAnimationFrame(animationId)
-
+    sceneAnimationLoop.stop()
     removeEventListeners()
     disposeSceneResources()
     resetSceneReferences()
