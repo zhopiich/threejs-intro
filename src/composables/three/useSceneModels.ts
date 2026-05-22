@@ -17,6 +17,20 @@ export function useSceneModels(options: ThreeSceneOptions = {}) {
     options.onPlaceholderVisibleChanged?.(true)
   }
 
+  function showPlaceholderModel(scene: THREE.Scene) {
+    disposeLoadedModel(scene)
+
+    if (!placeholderMesh)
+      placeholderMesh = createPlaceholderMesh()
+
+    if (!placeholderMesh.parent)
+      scene.add(placeholderMesh)
+
+    selectableObjects = [placeholderMesh]
+    emitCurrentModelResourceStats()
+    options.onPlaceholderVisibleChanged?.(true)
+  }
+
   function createPlaceholderMesh() {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
     const material = new THREE.MeshStandardMaterial({
@@ -124,5 +138,6 @@ export function useSceneModels(options: ThreeSceneOptions = {}) {
     resetReferences,
     setLoadedModel,
     setModelColor,
+    showPlaceholderModel,
   }
 }

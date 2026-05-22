@@ -5,7 +5,7 @@ import { computed, ref, watch } from 'vue'
 export interface ViewerModelOption {
   id: string
   name: string
-  url: string
+  url?: string
 }
 
 export function useModelViewerState<TModel extends ViewerModelOption>(
@@ -38,6 +38,8 @@ export function useModelViewerState<TModel extends ViewerModelOption>(
 
     if (state.status === 'loaded' && state.url)
       displayedModelUrl.value = state.url
+    else if (state.status === 'idle')
+      displayedModelUrl.value = undefined
   }
 
   function updateSelectedObject(info: SelectedObjectInfo | undefined) {

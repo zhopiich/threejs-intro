@@ -77,7 +77,7 @@ function resetView() {
   <main class="home-view" aria-labelledby="model-viewer-title">
     <SceneCanvas
       ref="sceneCanvas"
-      :model-url="selectedModel.url"
+      :model="selectedModel"
       :model-color="modelColor"
       :light-settings="lightSettings"
       :viewer-display-settings="viewerDisplaySettings"

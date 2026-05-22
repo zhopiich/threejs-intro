@@ -180,6 +180,19 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     )
   }
 
+  function showPlaceholderModel() {
+    if (!scene)
+      return
+
+    modelLoadId += 1
+    sceneModels.showPlaceholderModel(scene)
+    options.onModelLoadingStateChanged?.({ status: 'idle', progress: 0 })
+
+    const controls = sceneRenderer.getControls()
+    if (controls)
+      sceneCamera.resetCameraView(controls)
+  }
+
   function resetCameraView() {
     const controls = sceneRenderer.getControls()
 
@@ -294,5 +307,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     setLightSettings,
     setModelColor,
     setViewerDisplaySettings,
+    showPlaceholderModel,
   }
 }
