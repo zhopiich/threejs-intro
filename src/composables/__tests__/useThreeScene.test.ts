@@ -7,6 +7,7 @@ import {
   disposeObject3DResources,
   getHorizontalDragPosition,
   getSelectedObjectInfo,
+  normalizeToneMappingExposure,
 } from '../useThreeScene'
 
 describe('useThreeScene drag logic', () => {
@@ -78,5 +79,11 @@ describe('useThreeScene drag logic', () => {
       materialName: 'Paint',
       geometryType: 'BoxGeometry',
     })
+  })
+
+  it('clamps tone mapping exposure to the viewer supported range', () => {
+    expect(normalizeToneMappingExposure(-1)).toBe(0)
+    expect(normalizeToneMappingExposure(1.25)).toBe(1.25)
+    expect(normalizeToneMappingExposure(8)).toBe(3)
   })
 })

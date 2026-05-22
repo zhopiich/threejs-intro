@@ -4,6 +4,7 @@ import type {
   ModelLoadingState,
   ModelResourceStats,
   SelectedObjectInfo,
+  ViewerDisplaySettings,
 } from '@/composables/useThreeScene'
 
 import { onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
@@ -14,6 +15,7 @@ const props = defineProps<{
   modelUrl: string
   modelColor: string
   lightSettings: LightSettings
+  viewerDisplaySettings: ViewerDisplaySettings
 }>()
 
 const emit = defineEmits<{
@@ -32,6 +34,7 @@ const {
   resetCameraView,
   setLightSettings,
   setModelColor,
+  setViewerDisplaySettings,
 } = useThreeScene({
   onModelResourceStatsChanged(stats) {
     emit('modelResourceStatsChanged', stats)
@@ -58,6 +61,10 @@ watch(() => props.lightSettings, (settings) => {
   setLightSettings(settings)
 }, { deep: true })
 
+watch(() => props.viewerDisplaySettings, (settings) => {
+  setViewerDisplaySettings(settings)
+}, { deep: true })
+
 watch(() => props.modelUrl, (url) => {
   loadModel(url)
 })
@@ -69,6 +76,7 @@ onMounted(() => {
   init(canvas.value)
   setModelColor(props.modelColor)
   setLightSettings(props.lightSettings)
+  setViewerDisplaySettings(props.viewerDisplaySettings)
   loadModel(props.modelUrl)
 })
 

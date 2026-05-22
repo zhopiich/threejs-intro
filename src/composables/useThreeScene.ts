@@ -16,6 +16,15 @@ export interface LightSettings {
   }
 }
 
+export interface ViewerDisplaySettings {
+  autoRotate: boolean
+  showAxesHelper: boolean
+  showGridHelper: boolean
+  showGround: boolean
+  showPointLightHelper: boolean
+  toneMappingExposure: number
+}
+
 export interface ThreeSceneOptions {
   onModelResourceStatsChanged?: (stats: ModelResourceStats) => void
   onModelSelected?: (info: SelectedObjectInfo | undefined) => void
@@ -103,6 +112,10 @@ export function getSelectedObjectInfo(object: THREE.Object3D | undefined): Selec
   }
 }
 
+export function normalizeToneMappingExposure(exposure: number) {
+  return THREE.MathUtils.clamp(exposure, 0, 3)
+}
+
 export function disposeMaterialResources(material: THREE.Material) {
   Object.values(material).forEach((value) => {
     if (value instanceof THREE.Texture)
@@ -175,6 +188,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let pointLight: THREE.PointLight | undefined
   let pointLightHandle: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> | undefined
   let pointLightHelper: THREE.PointLightHelper | undefined
+  let axesHelper: THREE.AxesHelper | undefined
+  let gridHelper: THREE.GridHelper | undefined
   let environmentTexture: THREE.Texture | undefined
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
@@ -251,8 +266,11 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     pointLightHelper = new THREE.PointLightHelper(pointLight, 0.2)
     scene.add(pointLightHelper)
 
-    const axesHelper = new THREE.AxesHelper(2)
+    axesHelper = new THREE.AxesHelper(2)
     scene.add(axesHelper)
+
+    gridHelper = new THREE.GridHelper(7, 7, '#6b7280', '#2f3a46')
+    scene.add(gridHelper)
   }
 
   function createPointLightHandle(pointLight: THREE.PointLight) {
@@ -516,6 +534,26 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     }
   }
 
+  function setViewerDisplaySettings(settings: ViewerDisplaySettings) {
+    if (controls)
+      controls.autoRotate = settings.autoRotate
+
+    if (axesHelper)
+      axesHelper.visible = settings.showAxesHelper
+
+    if (gridHelper)
+      gridHelper.visible = settings.showGridHelper
+
+    if (ground)
+      ground.visible = settings.showGround
+
+    if (pointLightHelper)
+      pointLightHelper.visible = settings.showPointLightHelper
+
+    if (renderer)
+      renderer.toneMappingExposure = normalizeToneMappingExposure(settings.toneMappingExposure)
+  }
+
   function createRenderer(canvasElement: HTMLCanvasElement, width: number, height: number) {
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasElement,
@@ -597,6 +635,16 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     environmentTexture = undefined
     pointLightHandle?.geometry.dispose()
     pointLightHandle?.material.dispose()
+    axesHelper?.geometry.dispose()
+    if (Array.isArray(axesHelper?.material))
+      axesHelper.material.forEach(material => material.dispose())
+    else
+      axesHelper?.material.dispose()
+    gridHelper?.geometry.dispose()
+    if (Array.isArray(gridHelper?.material))
+      gridHelper.material.forEach(material => material.dispose())
+    else
+      gridHelper?.material.dispose()
     ground?.geometry.dispose()
     ground?.material.dispose()
     pointLightHelper?.dispose()
@@ -615,6 +663,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     pointLight = undefined
     pointLightHandle = undefined
     pointLightHelper = undefined
+    axesHelper = undefined
+    gridHelper = undefined
     environmentTexture = undefined
     controls = undefined
     camera = undefined
@@ -673,5 +723,13 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     resetSceneReferences()
   }
 
-  return { init, dispose, loadModel, resetCameraView, setLightSettings, setModelColor }
+  return {
+    init,
+    dispose,
+    loadModel,
+    resetCameraView,
+    setLightSettings,
+    setModelColor,
+    setViewerDisplaySettings,
+  }
 }
