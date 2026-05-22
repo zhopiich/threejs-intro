@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { ModelLoadingState } from '@/composables/useThreeScene'
+import type { ModelLoadingState, SelectedObjectInfo } from '@/composables/useThreeScene'
 
 defineProps<{
   isModelSelected: boolean
   loadingState: ModelLoadingState
   requestedModelName: string
   displayedModelName?: string
+  selectedObjectInfo?: SelectedObjectInfo
 }>()
 
 const emit = defineEmits<{
@@ -22,7 +23,18 @@ const emit = defineEmits<{
       Model Viewer
     </h1>
     <p class="selection-status">
-      {{ isModelSelected ? 'Model selected' : 'Click the model' }}
+      <template v-if="isModelSelected && selectedObjectInfo">
+        {{ selectedObjectInfo.objectName }}
+        <span>
+          - {{ selectedObjectInfo.geometryType }}
+        </span>
+        <span>
+          - {{ selectedObjectInfo.materialName }}
+        </span>
+      </template>
+      <template v-else>
+        Click the model
+      </template>
     </p>
     <p class="loading-status">
       <template v-if="loadingState.status === 'loading'">

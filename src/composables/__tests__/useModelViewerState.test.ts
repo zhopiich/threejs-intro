@@ -59,10 +59,28 @@ describe('useModelViewerState', () => {
   it('resets selection when the requested model changes', async () => {
     const state = useModelViewerState(models, models[0]!)
 
-    state.updateModelSelected(true)
+    state.updateSelectedObject({
+      objectName: 'Helmet shell',
+      materialName: 'Paint',
+      geometryType: 'BufferGeometry',
+    })
     state.selectedModelId.value = 'avocado'
     await nextTick()
 
     expect(state.isModelSelected.value).toBe(false)
+    expect(state.selectedObjectInfo.value).toBeUndefined()
+  })
+
+  it('derives selection state from selected object info', () => {
+    const state = useModelViewerState(models, models[0]!)
+
+    state.updateSelectedObject({
+      objectName: 'Helmet shell',
+      materialName: 'Paint',
+      geometryType: 'BufferGeometry',
+    })
+
+    expect(state.isModelSelected.value).toBe(true)
+    expect(state.selectedObjectInfo.value?.objectName).toBe('Helmet shell')
   })
 })

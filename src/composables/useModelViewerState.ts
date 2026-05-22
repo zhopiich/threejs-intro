@@ -1,4 +1,4 @@
-import type { ModelLoadingState } from './useThreeScene'
+import type { ModelLoadingState, SelectedObjectInfo } from './useThreeScene'
 
 import { computed, ref, watch } from 'vue'
 
@@ -12,7 +12,8 @@ export function useModelViewerState<TModel extends ViewerModelOption>(
   models: readonly TModel[],
   defaultModel: TModel,
 ) {
-  const isModelSelected = ref(false)
+  const selectedObjectInfo = ref<SelectedObjectInfo>()
+  const isModelSelected = computed(() => selectedObjectInfo.value !== undefined)
   const selectedModelId = ref(defaultModel.id)
   const selectedModel = computed(() => {
     return models.find(option => option.id === selectedModelId.value) ?? defaultModel
@@ -39,12 +40,12 @@ export function useModelViewerState<TModel extends ViewerModelOption>(
       displayedModelUrl.value = state.url
   }
 
-  function updateModelSelected(selected: boolean) {
-    isModelSelected.value = selected
+  function updateSelectedObject(info: SelectedObjectInfo | undefined) {
+    selectedObjectInfo.value = info
   }
 
   watch(selectedModelId, () => {
-    updateModelSelected(false)
+    updateSelectedObject(undefined)
   })
 
   return {
@@ -53,9 +54,10 @@ export function useModelViewerState<TModel extends ViewerModelOption>(
     loadingModel,
     modelLoadingState,
     requestedModelName,
+    selectedObjectInfo,
     selectedModel,
     selectedModelId,
     updateModelLoadingState,
-    updateModelSelected,
+    updateSelectedObject,
   }
 }

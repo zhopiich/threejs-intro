@@ -6,6 +6,8 @@ import {
   collectObject3DResourceStats,
   disposeObject3DResources,
   getHorizontalDragPosition,
+  getSelectedObjectInfo,
+  normalizeToneMappingExposure,
 } from '../useThreeScene'
 
 describe('useThreeScene drag logic', () => {
@@ -63,5 +65,25 @@ describe('useThreeScene drag logic', () => {
       materialCount: 1,
       textureCount: 1,
     })
+  })
+
+  it('extracts readable mesh info for the selected object inspector', () => {
+    const material = new THREE.MeshStandardMaterial()
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), material)
+
+    mesh.name = 'Helmet shell'
+    material.name = 'Paint'
+
+    expect(getSelectedObjectInfo(mesh)).toEqual({
+      objectName: 'Helmet shell',
+      materialName: 'Paint',
+      geometryType: 'BoxGeometry',
+    })
+  })
+
+  it('clamps tone mapping exposure to the viewer supported range', () => {
+    expect(normalizeToneMappingExposure(-1)).toBe(0)
+    expect(normalizeToneMappingExposure(1.25)).toBe(1.25)
+    expect(normalizeToneMappingExposure(8)).toBe(3)
   })
 })

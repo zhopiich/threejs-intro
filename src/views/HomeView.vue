@@ -2,10 +2,12 @@
 import type {
   LightSettings,
   ModelResourceStats,
+  ViewerDisplaySettings,
 } from '@/composables/useThreeScene'
 
 import { ref, useTemplateRef } from 'vue'
 
+import DisplayControlPanel from '@/components/model-viewer/DisplayControlPanel.vue'
 import LightControlPanel from '@/components/model-viewer/LightControlPanel.vue'
 import ModelColorPicker from '@/components/model-viewer/ModelColorPicker.vue'
 import ModelInfoPanel from '@/components/model-viewer/ModelInfoPanel.vue'
@@ -23,10 +25,11 @@ const {
   isModelSelected,
   modelLoadingState,
   requestedModelName,
+  selectedObjectInfo,
   selectedModel,
   selectedModelId,
   updateModelLoadingState,
-  updateModelSelected,
+  updateSelectedObject,
 } = useModelViewerState(modelOptions, defaultModel)
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
@@ -49,6 +52,14 @@ const lightSettings = ref<LightSettings>({
     z: 1.5,
   },
 })
+const viewerDisplaySettings = ref<ViewerDisplaySettings>({
+  autoRotate: false,
+  showAxesHelper: true,
+  showGridHelper: true,
+  showGround: true,
+  showPointLightHelper: true,
+  toneMappingExposure: 1,
+})
 
 function updatePointLightPosition(position: LightSettings['pointPosition']) {
   lightSettings.value = {
@@ -69,9 +80,10 @@ function resetView() {
       :model-url="selectedModel.url"
       :model-color="modelColor"
       :light-settings="lightSettings"
+      :viewer-display-settings="viewerDisplaySettings"
       @model-loading-state-changed="updateModelLoadingState"
       @model-resource-stats-changed="modelResourceStats = $event"
-      @model-selected="updateModelSelected"
+      @model-selected="updateSelectedObject"
       @placeholder-visible-changed="isPlaceholderVisible = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
@@ -83,6 +95,7 @@ function resetView() {
           :loading-state="modelLoadingState"
           :requested-model-name="requestedModelName"
           :displayed-model-name="displayedModel?.name"
+          :selected-object-info="selectedObjectInfo"
           @reset-view="resetView"
         />
         <ModelSelector v-model="selectedModelId" :options="modelOptions" />
@@ -94,7 +107,10 @@ function resetView() {
         />
       </div>
 
-      <LightControlPanel v-model:settings="lightSettings" />
+      <div class="viewer-secondary-panel">
+        <LightControlPanel v-model:settings="lightSettings" />
+        <DisplayControlPanel v-model:settings="viewerDisplaySettings" />
+      </div>
     </div>
   </main>
 </template>
@@ -121,6 +137,12 @@ function resetView() {
   display: grid;
   align-content: start;
   gap: 18px;
+}
+
+.viewer-secondary-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
 }
 
 @media (width <= 760px) {
