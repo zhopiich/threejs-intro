@@ -6,6 +6,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 
 import { normalizeToneMappingExposure } from './three/displaySettings'
 import { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
+import { getModelLoadErrorMessage, getModelLoadProgress, importGLTFLoader } from './three/modelLoading'
 import { disposeObject3DResources } from './three/modelResources'
 import { useSceneCamera } from './three/useSceneCamera'
 import { useSceneHelpers } from './three/useSceneHelpers'
@@ -28,16 +29,6 @@ export type {
   ThreeSceneOptions,
   ViewerDisplaySettings,
 } from './three/sceneTypes'
-
-type GLTFLoaderModule = typeof import('three/examples/jsm/loaders/GLTFLoader.js')
-
-let gltfLoaderModulePromise: Promise<GLTFLoaderModule> | undefined
-
-function importGLTFLoader() {
-  gltfLoaderModulePromise ??= import('three/examples/jsm/loaders/GLTFLoader.js')
-
-  return gltfLoaderModulePromise
-}
 
 export function useThreeScene(options: ThreeSceneOptions = {}) {
   let renderer: THREE.WebGLRenderer | undefined
@@ -185,11 +176,11 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         if (currentLoadId !== modelLoadId)
           return
 
-        const progress = progressEvent.total > 0
-          ? progressEvent.loaded / progressEvent.total
-          : 0
-
-        options.onModelLoadingStateChanged?.({ status: 'loading', progress, url })
+        options.onModelLoadingStateChanged?.({
+          status: 'loading',
+          progress: getModelLoadProgress(progressEvent),
+          url,
+        })
       },
       (error) => {
         if (currentLoadId !== modelLoadId)
@@ -199,7 +190,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
           status: 'error',
           progress: 0,
           url,
-          errorMessage: error instanceof Error ? error.message : 'Failed to load model',
+          errorMessage: getModelLoadErrorMessage(error),
         })
       },
     )
