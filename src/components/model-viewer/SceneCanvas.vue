@@ -3,6 +3,7 @@ import type {
   LightSettings,
   ModelLoadingState,
   ModelResourceStats,
+  SelectedObjectInfo,
 } from '@/composables/useThreeScene'
 
 import { onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
@@ -17,7 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   modelResourceStatsChanged: [stats: ModelResourceStats]
-  modelSelected: [selected: boolean]
+  modelSelected: [info: SelectedObjectInfo | undefined]
   modelLoadingStateChanged: [state: ModelLoadingState]
   placeholderVisibleChanged: [visible: boolean]
   pointLightPositionChanged: [position: LightSettings['pointPosition']]
@@ -35,8 +36,8 @@ const {
   onModelResourceStatsChanged(stats) {
     emit('modelResourceStatsChanged', stats)
   },
-  onModelSelected(selected) {
-    emit('modelSelected', selected)
+  onModelSelected(info) {
+    emit('modelSelected', info)
   },
   onModelLoadingStateChanged(state) {
     emit('modelLoadingStateChanged', state)

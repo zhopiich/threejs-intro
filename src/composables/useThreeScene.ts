@@ -18,7 +18,7 @@ export interface LightSettings {
 
 export interface ThreeSceneOptions {
   onModelResourceStatsChanged?: (stats: ModelResourceStats) => void
-  onModelSelected?: (selected: boolean) => void
+  onModelSelected?: (info: SelectedObjectInfo | undefined) => void
   onModelLoadingStateChanged?: (state: ModelLoadingState) => void
   onPlaceholderVisibleChanged?: (visible: boolean) => void
   onPointLightPositionChanged?: (position: LightSettings['pointPosition']) => void
@@ -35,6 +35,12 @@ export interface ModelResourceStats {
   meshCount: number
   materialCount: number
   textureCount: number
+}
+
+export interface SelectedObjectInfo {
+  objectName: string
+  materialName: string
+  geometryType: string
 }
 
 interface CameraFit {
@@ -81,6 +87,19 @@ export function calculateCameraFit(
     position: center.clone().add(normalizedDirection.multiplyScalar(distance)),
     near: Math.max(distance / 100, 0.01),
     far: distance * 100,
+  }
+}
+
+export function getSelectedObjectInfo(object: THREE.Object3D | undefined): SelectedObjectInfo | undefined {
+  if (!(object instanceof THREE.Mesh))
+    return undefined
+
+  const material = Array.isArray(object.material) ? object.material[0] : object.material
+
+  return {
+    objectName: object.name || object.parent?.name || 'Unnamed mesh',
+    materialName: material?.name || material?.type || 'Unknown material',
+    geometryType: object.geometry?.type || 'Unknown geometry',
   }
 }
 
@@ -274,14 +293,14 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
           controls.enabled = false
         dragPlane.set(new THREE.Vector3(0, 1, 0), -pointLight.position.y)
         canvas.setPointerCapture(event.pointerId)
-        options.onModelSelected?.(false)
+        options.onModelSelected?.(undefined)
         return
       }
     }
 
     const hits = raycaster.intersectObjects(selectableObjects, true)
 
-    options.onModelSelected?.(hits.length > 0)
+    options.onModelSelected?.(getSelectedObjectInfo(hits[0]?.object))
   }
 
   function handleCanvasPointerMove(event: PointerEvent) {

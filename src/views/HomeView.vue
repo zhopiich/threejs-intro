@@ -23,10 +23,11 @@ const {
   isModelSelected,
   modelLoadingState,
   requestedModelName,
+  selectedObjectInfo,
   selectedModel,
   selectedModelId,
   updateModelLoadingState,
-  updateModelSelected,
+  updateSelectedObject,
 } = useModelViewerState(modelOptions, defaultModel)
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
@@ -71,7 +72,7 @@ function resetView() {
       :light-settings="lightSettings"
       @model-loading-state-changed="updateModelLoadingState"
       @model-resource-stats-changed="modelResourceStats = $event"
-      @model-selected="updateModelSelected"
+      @model-selected="updateSelectedObject"
       @placeholder-visible-changed="isPlaceholderVisible = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
@@ -83,6 +84,7 @@ function resetView() {
           :loading-state="modelLoadingState"
           :requested-model-name="requestedModelName"
           :displayed-model-name="displayedModel?.name"
+          :selected-object-info="selectedObjectInfo"
           @reset-view="resetView"
         />
         <ModelSelector v-model="selectedModelId" :options="modelOptions" />

@@ -6,6 +6,7 @@ import {
   collectObject3DResourceStats,
   disposeObject3DResources,
   getHorizontalDragPosition,
+  getSelectedObjectInfo,
 } from '../useThreeScene'
 
 describe('useThreeScene drag logic', () => {
@@ -62,6 +63,20 @@ describe('useThreeScene drag logic', () => {
       meshCount: 2,
       materialCount: 1,
       textureCount: 1,
+    })
+  })
+
+  it('extracts readable mesh info for the selected object inspector', () => {
+    const material = new THREE.MeshStandardMaterial()
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), material)
+
+    mesh.name = 'Helmet shell'
+    material.name = 'Paint'
+
+    expect(getSelectedObjectInfo(mesh)).toEqual({
+      objectName: 'Helmet shell',
+      materialName: 'Paint',
+      geometryType: 'BoxGeometry',
     })
   })
 })
