@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type {
   LightSettings,
-  ModelLoadingState,
   ModelResourceStats,
 } from '@/composables/useThreeScene'
 
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { ref, useTemplateRef } from 'vue'
 
 import LightControlPanel from '@/components/model-viewer/LightControlPanel.vue'
 import ModelColorPicker from '@/components/model-viewer/ModelColorPicker.vue'
@@ -14,33 +13,28 @@ import ModelLifecycleStats from '@/components/model-viewer/ModelLifecycleStats.v
 import { modelOptions } from '@/components/model-viewer/modelOptions'
 import ModelSelector from '@/components/model-viewer/ModelSelector.vue'
 import SceneCanvas from '@/components/model-viewer/SceneCanvas.vue'
+import { useModelViewerState } from '@/composables/useModelViewerState'
 
 const defaultModel = modelOptions[0]!
 
 const sceneCanvas = useTemplateRef<InstanceType<typeof SceneCanvas>>('sceneCanvas')
-const isModelSelected = ref(false)
-const selectedModelId = ref(defaultModel.id)
-const selectedModel = computed(() => {
-  return modelOptions.find(option => option.id === selectedModelId.value) ?? defaultModel
-})
-const displayedModelUrl = ref<string>()
-const displayedModel = computed(() => {
-  return modelOptions.find(option => option.url === displayedModelUrl.value)
-})
+const {
+  displayedModel,
+  isModelSelected,
+  modelLoadingState,
+  requestedModelName,
+  selectedModel,
+  selectedModelId,
+  updateModelLoadingState,
+  updateModelSelected,
+} = useModelViewerState(modelOptions, defaultModel)
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
 const isPlaceholderVisible = ref(false)
-const modelLoadingState = ref<ModelLoadingState>({
-  status: 'idle',
-  progress: 0,
-})
 const modelResourceStats = ref<ModelResourceStats>({
   meshCount: 0,
   materialCount: 0,
   textureCount: 0,
-})
-const loadingModel = computed(() => {
-  return modelOptions.find(option => option.url === modelLoadingState.value.url)
 })
 const lightSettings = ref<LightSettings>({
   ambientColor: '#ffffff',
@@ -66,17 +60,6 @@ function updatePointLightPosition(position: LightSettings['pointPosition']) {
 function resetView() {
   sceneCanvas.value?.resetCameraView()
 }
-
-function updateModelLoadingState(state: ModelLoadingState) {
-  modelLoadingState.value = state
-
-  if (state.status === 'loaded' && state.url)
-    displayedModelUrl.value = state.url
-}
-
-watch(selectedModelId, () => {
-  isModelSelected.value = false
-})
 </script>
 
 <template>
@@ -88,7 +71,7 @@ watch(selectedModelId, () => {
       :light-settings="lightSettings"
       @model-loading-state-changed="updateModelLoadingState"
       @model-resource-stats-changed="modelResourceStats = $event"
-      @model-selected="isModelSelected = $event"
+      @model-selected="updateModelSelected"
       @placeholder-visible-changed="isPlaceholderVisible = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
@@ -98,7 +81,7 @@ watch(selectedModelId, () => {
         <ModelInfoPanel
           :is-model-selected="isModelSelected"
           :loading-state="modelLoadingState"
-          :requested-model-name="loadingModel?.name ?? selectedModel.name"
+          :requested-model-name="requestedModelName"
           :displayed-model-name="displayedModel?.name"
           @reset-view="resetView"
         />
