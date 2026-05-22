@@ -1,7 +1,11 @@
 import * as THREE from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { getHorizontalDragPosition } from '../useThreeScene'
+import {
+  calculateCameraFit,
+  disposeObject3DResources,
+  getHorizontalDragPosition,
+} from '../useThreeScene'
 
 describe('useThreeScene drag logic', () => {
   it('updates point light x/z from the drag hit point while preserving y', () => {
@@ -13,5 +17,34 @@ describe('useThreeScene drag logic', () => {
       y: 1.6,
       z: -2.75,
     })
+  })
+
+  it('calculates a camera fit that looks at the object center from outside its radius', () => {
+    const center = new THREE.Vector3(0, 1, 0)
+    const fit = calculateCameraFit(center, 2, 60)
+
+    expect(fit.center).toEqual(center)
+    expect(fit.position.distanceTo(center)).toBeGreaterThan(2)
+    expect(fit.near).toBeGreaterThan(0)
+    expect(fit.far).toBeGreaterThan(fit.position.distanceTo(center))
+  })
+
+  it('disposes loaded model geometry, material, and textures', () => {
+    const geometry = new THREE.BoxGeometry()
+    const texture = new THREE.Texture()
+    const material = new THREE.MeshStandardMaterial({ map: texture })
+    const mesh = new THREE.Mesh(geometry, material)
+    const group = new THREE.Group()
+    const disposeGeometry = vi.spyOn(geometry, 'dispose')
+    const disposeMaterial = vi.spyOn(material, 'dispose')
+    const disposeTexture = vi.spyOn(texture, 'dispose')
+
+    group.add(mesh)
+
+    disposeObject3DResources(group)
+
+    expect(disposeGeometry).toHaveBeenCalledOnce()
+    expect(disposeMaterial).toHaveBeenCalledOnce()
+    expect(disposeTexture).toHaveBeenCalledOnce()
   })
 })

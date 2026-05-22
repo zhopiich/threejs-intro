@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import type { ModelLoadingState } from '@/composables/useThreeScene'
+
 defineProps<{
   isModelSelected: boolean
+  loadingState: ModelLoadingState
+}>()
+
+const emit = defineEmits<{
+  resetView: []
 }>()
 </script>
 
@@ -10,11 +17,28 @@ defineProps<{
       Three.js
     </p>
     <h1 id="model-viewer-title">
-      Model Viewer Placeholder
+      Model Viewer
     </h1>
     <p class="selection-status">
       {{ isModelSelected ? 'Model selected' : 'Click the model' }}
     </p>
+    <p class="loading-status">
+      <template v-if="loadingState.status === 'loading'">
+        Loading model {{ Math.round(loadingState.progress * 100) }}%
+      </template>
+      <template v-else-if="loadingState.status === 'loaded'">
+        DamagedHelmet.glb loaded
+      </template>
+      <template v-else-if="loadingState.status === 'error'">
+        {{ loadingState.errorMessage ?? 'Failed to load model' }}
+      </template>
+      <template v-else>
+        Placeholder ready
+      </template>
+    </p>
+    <button class="reset-button" type="button" @click="emit('resetView')">
+      Reset view
+    </button>
   </section>
 </template>
 
@@ -44,5 +68,29 @@ h1 {
   margin: 10px 0 0;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.loading-status {
+  margin: 6px 0 0;
+  max-width: 28rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.reset-button {
+  margin-top: 12px;
+  padding: 7px 12px;
+  color: #f6f8fb;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgb(255 255 255 / 12%);
+  border: 1px solid rgb(255 255 255 / 26%);
+  border-radius: 6px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.reset-button:hover {
+  background: rgb(255 255 255 / 18%);
 }
 </style>
