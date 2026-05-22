@@ -65,11 +65,6 @@ watch(selectedModelId, () => {
     status: 'idle',
     progress: 0,
   }
-  modelResourceStats.value = {
-    meshCount: 0,
-    materialCount: 0,
-    textureCount: 0,
-  }
 })
 </script>
 
