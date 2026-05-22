@@ -1,14 +1,13 @@
-import type { CameraFit } from './three/cameraFit'
 import type { LightSettings, ThreeSceneOptions, ViewerDisplaySettings } from './three/sceneTypes'
 
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-import { calculateCameraFit } from './three/cameraFit'
 import { normalizeToneMappingExposure } from './three/displaySettings'
 import { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
 import { disposeObject3DResources } from './three/modelResources'
+import { useSceneCamera } from './three/useSceneCamera'
 import { useSceneHelpers } from './three/useSceneHelpers'
 import { useSceneLights } from './three/useSceneLights'
 import { useSceneModels } from './three/useSceneModels'
@@ -43,20 +42,19 @@ function importGLTFLoader() {
 export function useThreeScene(options: ThreeSceneOptions = {}) {
   let renderer: THREE.WebGLRenderer | undefined
   let scene: THREE.Scene | undefined
-  let camera: THREE.PerspectiveCamera | undefined
   let environmentTexture: THREE.Texture | undefined
   let controls: OrbitControls | undefined
   let timer: THREE.Timer | undefined
   let animationId: number | undefined
   let canvas: HTMLCanvasElement | undefined
   let isDraggingPointLight = false
-  let lastCameraFit: CameraFit | undefined
   let modelLoadId = 0
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
   const dragPlane = new THREE.Plane()
   const dragHitPoint = new THREE.Vector3()
+  const sceneCamera = useSceneCamera()
   const sceneHelpers = useSceneHelpers()
   const sceneLights = useSceneLights()
   const sceneModels = useSceneModels(options)
@@ -68,27 +66,20 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     }
   }
 
-  function createCamera(width: number, height: number) {
-    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100)
-    camera.position.set(3, 2.4, 4.5)
-    camera.lookAt(0, 0.25, 0)
-
-    return camera
-  }
-
   function updateRendererSize() {
-    if (!camera || !renderer)
+    if (!renderer)
       return
 
     const { width, height } = getViewportSize()
 
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
+    sceneCamera.updateViewport(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
   }
 
   function handleCanvasPointerDown(event: PointerEvent) {
+    const camera = sceneCamera.getCamera()
+
     if (!canvas || !camera)
       return
 
@@ -119,6 +110,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function handleCanvasPointerMove(event: PointerEvent) {
+    const camera = sceneCamera.getCamera()
     const pointLight = sceneLights.getPointLight()
     const pointLightHandle = sceneLights.getPointLightHandle()
 
@@ -185,7 +177,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         }
 
         sceneModels.setLoadedModel(scene, gltf.scene)
-        fitCameraToObject(gltf.scene)
+        if (controls)
+          sceneCamera.fitCameraToObject(gltf.scene, controls)
         options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1, url })
       },
       (progressEvent) => {
@@ -212,29 +205,11 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     )
   }
 
-  function fitCameraToObject(object: THREE.Object3D) {
-    if (!camera || !controls)
-      return
-
-    const box = new THREE.Box3().setFromObject(object)
-    const sphere = new THREE.Sphere()
-
-    box.getBoundingSphere(sphere)
-    lastCameraFit = calculateCameraFit(sphere.center, sphere.radius, camera.fov)
-    resetCameraView()
-  }
-
   function resetCameraView() {
-    if (!camera || !controls || !lastCameraFit)
+    if (!controls)
       return
 
-    camera.position.copy(lastCameraFit.position)
-    camera.near = lastCameraFit.near
-    camera.far = lastCameraFit.far
-    camera.updateProjectionMatrix()
-
-    controls.target.copy(lastCameraFit.center)
-    controls.update()
+    sceneCamera.resetCameraView(controls)
   }
 
   function setLightSettings(settings: LightSettings) {
@@ -305,6 +280,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
   function startAnimationLoop() {
     function animate(timestamp: number) {
+      const camera = sceneCamera.getCamera()
+
       if (!renderer || !scene || !camera || !timer)
         return
 
@@ -346,13 +323,12 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     sceneLights.resetReferences()
     environmentTexture = undefined
     controls = undefined
-    camera = undefined
+    sceneCamera.resetReferences()
     scene = undefined
     timer = undefined
     renderer = undefined
     canvas = undefined
     isDraggingPointLight = false
-    lastCameraFit = undefined
     modelLoadId += 1
   }
 
@@ -363,8 +339,10 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     scene = new THREE.Scene()
     scene.background = new THREE.Color('#101820')
 
-    camera = createCamera(sizes.width, sizes.height)
-    scene.add(camera)
+    sceneCamera.addToScene(scene, sizes.width, sizes.height)
+    const camera = sceneCamera.getCamera()
+    if (!camera)
+      return
 
     sceneModels.addPlaceholderToScene(scene)
 
