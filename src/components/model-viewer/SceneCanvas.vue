@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ModelOption } from './modelOptions'
 import type {
   LightSettings,
   ModelLoadingState,
@@ -12,7 +13,7 @@ import { onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
 import { useThreeScene } from '@/composables/useThreeScene'
 
 const props = defineProps<{
-  modelUrl: string
+  model: ModelOption
   modelColor: string
   lightSettings: LightSettings
   viewerDisplaySettings: ViewerDisplaySettings
@@ -35,6 +36,7 @@ const {
   setLightSettings,
   setModelColor,
   setViewerDisplaySettings,
+  showPlaceholderModel,
 } = useThreeScene({
   onModelResourceStatsChanged(stats) {
     emit('modelResourceStatsChanged', stats)
@@ -65,8 +67,13 @@ watch(() => props.viewerDisplaySettings, (settings) => {
   setViewerDisplaySettings(settings)
 }, { deep: true })
 
-watch(() => props.modelUrl, (url) => {
-  loadModel(url)
+watch(() => props.model, (model) => {
+  if (model.kind === 'placeholder') {
+    showPlaceholderModel()
+    return
+  }
+
+  loadModel(model.url)
 })
 
 onMounted(() => {
@@ -77,7 +84,9 @@ onMounted(() => {
   setModelColor(props.modelColor)
   setLightSettings(props.lightSettings)
   setViewerDisplaySettings(props.viewerDisplaySettings)
-  loadModel(props.modelUrl)
+
+  if (props.model.kind === 'glb')
+    loadModel(props.model.url)
 })
 
 onUnmounted(() => {
