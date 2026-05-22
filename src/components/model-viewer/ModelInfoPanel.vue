@@ -4,6 +4,8 @@ import type { ModelLoadingState } from '@/composables/useThreeScene'
 defineProps<{
   isModelSelected: boolean
   loadingState: ModelLoadingState
+  requestedModelName: string
+  displayedModelName?: string
 }>()
 
 const emit = defineEmits<{
@@ -24,13 +26,22 @@ const emit = defineEmits<{
     </p>
     <p class="loading-status">
       <template v-if="loadingState.status === 'loading'">
-        Loading model {{ Math.round(loadingState.progress * 100) }}%
+        Loading {{ requestedModelName }} {{ Math.round(loadingState.progress * 100) }}%
+        <span v-if="displayedModelName">
+          - Showing {{ displayedModelName }}
+        </span>
       </template>
       <template v-else-if="loadingState.status === 'loaded'">
-        DamagedHelmet.glb loaded
+        {{ displayedModelName ?? requestedModelName }} loaded
       </template>
       <template v-else-if="loadingState.status === 'error'">
-        {{ loadingState.errorMessage ?? 'Failed to load model' }}
+        Failed to load {{ requestedModelName }}
+        <span v-if="loadingState.errorMessage">
+          - {{ loadingState.errorMessage }}
+        </span>
+        <span v-if="displayedModelName">
+          - Showing {{ displayedModelName }}
+        </span>
       </template>
       <template v-else>
         Placeholder ready

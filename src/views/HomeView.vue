@@ -1,21 +1,40 @@
 <script setup lang="ts">
-import type { LightSettings, ModelLoadingState } from '@/composables/useThreeScene'
+import type {
+  LightSettings,
+  ModelResourceStats,
+} from '@/composables/useThreeScene'
 
 import { ref, useTemplateRef } from 'vue'
 
 import LightControlPanel from '@/components/model-viewer/LightControlPanel.vue'
 import ModelColorPicker from '@/components/model-viewer/ModelColorPicker.vue'
 import ModelInfoPanel from '@/components/model-viewer/ModelInfoPanel.vue'
+import ModelLifecycleStats from '@/components/model-viewer/ModelLifecycleStats.vue'
+import { modelOptions } from '@/components/model-viewer/modelOptions'
+import ModelSelector from '@/components/model-viewer/ModelSelector.vue'
 import SceneCanvas from '@/components/model-viewer/SceneCanvas.vue'
+import { useModelViewerState } from '@/composables/useModelViewerState'
+
+const defaultModel = modelOptions[0]!
 
 const sceneCanvas = useTemplateRef<InstanceType<typeof SceneCanvas>>('sceneCanvas')
-const isModelSelected = ref(false)
-const modelUrl = '/models/DamagedHelmet.glb'
+const {
+  displayedModel,
+  isModelSelected,
+  modelLoadingState,
+  requestedModelName,
+  selectedModel,
+  selectedModelId,
+  updateModelLoadingState,
+  updateModelSelected,
+} = useModelViewerState(modelOptions, defaultModel)
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
-const modelLoadingState = ref<ModelLoadingState>({
-  status: 'idle',
-  progress: 0,
+const isPlaceholderVisible = ref(false)
+const modelResourceStats = ref<ModelResourceStats>({
+  meshCount: 0,
+  materialCount: 0,
+  textureCount: 0,
 })
 const lightSettings = ref<LightSettings>({
   ambientColor: '#ffffff',
@@ -47,11 +66,13 @@ function resetView() {
   <main class="home-view" aria-labelledby="model-viewer-title">
     <SceneCanvas
       ref="sceneCanvas"
-      :model-url="modelUrl"
+      :model-url="selectedModel.url"
       :model-color="modelColor"
       :light-settings="lightSettings"
-      @model-loading-state-changed="modelLoadingState = $event"
-      @model-selected="isModelSelected = $event"
+      @model-loading-state-changed="updateModelLoadingState"
+      @model-resource-stats-changed="modelResourceStats = $event"
+      @model-selected="updateModelSelected"
+      @placeholder-visible-changed="isPlaceholderVisible = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
 
@@ -60,10 +81,14 @@ function resetView() {
         <ModelInfoPanel
           :is-model-selected="isModelSelected"
           :loading-state="modelLoadingState"
+          :requested-model-name="requestedModelName"
+          :displayed-model-name="displayedModel?.name"
           @reset-view="resetView"
         />
+        <ModelSelector v-model="selectedModelId" :options="modelOptions" />
+        <ModelLifecycleStats :stats="modelResourceStats" />
         <ModelColorPicker
-          v-if="modelLoadingState.status !== 'loaded'"
+          v-if="isPlaceholderVisible"
           v-model="modelColor"
           :options="modelColorOptions"
         />

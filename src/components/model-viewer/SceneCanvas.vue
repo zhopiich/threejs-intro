@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import type { LightSettings, ModelLoadingState } from '@/composables/useThreeScene'
+import type {
+  LightSettings,
+  ModelLoadingState,
+  ModelResourceStats,
+} from '@/composables/useThreeScene'
 
 import { onMounted, onUnmounted, useTemplateRef, watch } from 'vue'
 
@@ -12,8 +16,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  modelResourceStatsChanged: [stats: ModelResourceStats]
   modelSelected: [selected: boolean]
   modelLoadingStateChanged: [state: ModelLoadingState]
+  placeholderVisibleChanged: [visible: boolean]
   pointLightPositionChanged: [position: LightSettings['pointPosition']]
 }>()
 
@@ -26,11 +32,17 @@ const {
   setLightSettings,
   setModelColor,
 } = useThreeScene({
+  onModelResourceStatsChanged(stats) {
+    emit('modelResourceStatsChanged', stats)
+  },
   onModelSelected(selected) {
     emit('modelSelected', selected)
   },
   onModelLoadingStateChanged(state) {
     emit('modelLoadingStateChanged', state)
+  },
+  onPlaceholderVisibleChanged(visible) {
+    emit('placeholderVisibleChanged', visible)
   },
   onPointLightPositionChanged(position) {
     emit('pointLightPositionChanged', position)
