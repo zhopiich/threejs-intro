@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  calculateCameraFit,
   disposeObject3DResources,
   getHorizontalDragPosition,
 } from '../useThreeScene'
@@ -16,6 +17,16 @@ describe('useThreeScene drag logic', () => {
       y: 1.6,
       z: -2.75,
     })
+  })
+
+  it('calculates a camera fit that looks at the object center from outside its radius', () => {
+    const center = new THREE.Vector3(0, 1, 0)
+    const fit = calculateCameraFit(center, 2, 60)
+
+    expect(fit.center).toEqual(center)
+    expect(fit.position.distanceTo(center)).toBeGreaterThan(2)
+    expect(fit.near).toBeGreaterThan(0)
+    expect(fit.far).toBeGreaterThan(fit.position.distanceTo(center))
   })
 
   it('disposes loaded model geometry, material, and textures', () => {

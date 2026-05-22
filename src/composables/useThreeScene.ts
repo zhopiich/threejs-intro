@@ -28,6 +28,13 @@ export interface ModelLoadingState {
   errorMessage?: string
 }
 
+interface CameraFit {
+  center: THREE.Vector3
+  position: THREE.Vector3
+  near: number
+  far: number
+}
+
 type GLTFLoaderModule = typeof import('three/examples/jsm/loaders/GLTFLoader.js')
 
 let gltfLoaderModulePromise: Promise<GLTFLoaderModule> | undefined
@@ -46,6 +53,25 @@ export function getHorizontalDragPosition(
     x: hitPoint.x,
     y: currentPosition.y,
     z: hitPoint.z,
+  }
+}
+
+export function calculateCameraFit(
+  center: THREE.Vector3,
+  radius: number,
+  cameraFov: number,
+  direction = new THREE.Vector3(1, 0.65, 1),
+): CameraFit {
+  const safeRadius = Math.max(radius, 0.1)
+  const fov = THREE.MathUtils.degToRad(cameraFov)
+  const distance = (safeRadius / Math.sin(fov / 2)) * 1.15
+  const normalizedDirection = direction.clone().normalize()
+
+  return {
+    center: center.clone(),
+    position: center.clone().add(normalizedDirection.multiplyScalar(distance)),
+    near: Math.max(distance / 100, 0.01),
+    far: distance * 100,
   }
 }
 
@@ -90,6 +116,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let animationId: number | undefined
   let canvas: HTMLCanvasElement | undefined
   let isDraggingPointLight = false
+  let lastCameraFit: CameraFit | undefined
   let modelLoadId = 0
   let selectableObjects: THREE.Object3D[] = []
 
@@ -284,6 +311,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         prepareLoadedModel(loadedModel)
 
         scene.add(loadedModel)
+        fitCameraToObject(loadedModel)
         options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1 })
       },
       (progressEvent) => {
@@ -339,6 +367,31 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       child.receiveShadow = true
       selectableObjects.push(child)
     })
+  }
+
+  function fitCameraToObject(object: THREE.Object3D) {
+    if (!camera || !controls)
+      return
+
+    const box = new THREE.Box3().setFromObject(object)
+    const sphere = new THREE.Sphere()
+
+    box.getBoundingSphere(sphere)
+    lastCameraFit = calculateCameraFit(sphere.center, sphere.radius, camera.fov)
+    resetCameraView()
+  }
+
+  function resetCameraView() {
+    if (!camera || !controls || !lastCameraFit)
+      return
+
+    camera.position.copy(lastCameraFit.position)
+    camera.near = lastCameraFit.near
+    camera.far = lastCameraFit.far
+    camera.updateProjectionMatrix()
+
+    controls.target.copy(lastCameraFit.center)
+    controls.update()
   }
 
   function disposePlaceholderMesh() {
@@ -496,6 +549,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     canvas = undefined
     selectableObjects = []
     isDraggingPointLight = false
+    lastCameraFit = undefined
     modelLoadId += 1
   }
 
@@ -542,5 +596,5 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     resetSceneReferences()
   }
 
-  return { init, dispose, loadModel, setLightSettings, setModelColor }
+  return { init, dispose, loadModel, resetCameraView, setLightSettings, setModelColor }
 }
