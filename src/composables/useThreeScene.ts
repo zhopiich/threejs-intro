@@ -9,6 +9,7 @@ import { calculateCameraFit } from './three/cameraFit'
 import { normalizeToneMappingExposure } from './three/displaySettings'
 import { getHorizontalDragPosition, getSelectedObjectInfo } from './three/interaction'
 import { collectObject3DResourceStats, disposeObject3DResources } from './three/modelResources'
+import { useSceneLights } from './three/useSceneLights'
 
 export { calculateCameraFit } from './three/cameraFit'
 export { normalizeToneMappingExposure } from './three/displaySettings'
@@ -44,11 +45,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   let placeholderMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
   let loadedModel: THREE.Group | undefined
   let ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | undefined
-  let ambientLight: THREE.AmbientLight | undefined
-  let directionalLight: THREE.DirectionalLight | undefined
-  let pointLight: THREE.PointLight | undefined
-  let pointLightHandle: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> | undefined
-  let pointLightHelper: THREE.PointLightHelper | undefined
   let axesHelper: THREE.AxesHelper | undefined
   let gridHelper: THREE.GridHelper | undefined
   let environmentTexture: THREE.Texture | undefined
@@ -65,6 +61,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   const pointer = new THREE.Vector2()
   const dragPlane = new THREE.Plane()
   const dragHitPoint = new THREE.Vector3()
+  const sceneLights = useSceneLights()
 
   function getViewportSize() {
     return {
@@ -106,41 +103,12 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     return ground
   }
 
-  function addLights(scene: THREE.Scene) {
-    ambientLight = new THREE.AmbientLight('#ffffff', 0.2)
-    scene.add(ambientLight)
-
-    directionalLight = new THREE.DirectionalLight('#ffffff', 1.2)
-    directionalLight.position.set(3, 4, 5)
-    directionalLight.castShadow = true
-    directionalLight.shadow.mapSize.set(1024, 1024)
-    scene.add(directionalLight)
-
-    pointLight = new THREE.PointLight('#ffb86c', 2, 8)
-    pointLight.position.set(-2, 1.6, 1.5)
-    scene.add(pointLight)
-
-    return pointLight
-  }
-
-  function addHelpers(scene: THREE.Scene, pointLight: THREE.PointLight) {
-    pointLightHelper = new THREE.PointLightHelper(pointLight, 0.2)
-    scene.add(pointLightHelper)
-
+  function addSceneHelpers(scene: THREE.Scene) {
     axesHelper = new THREE.AxesHelper(2)
     scene.add(axesHelper)
 
     gridHelper = new THREE.GridHelper(7, 7, '#6b7280', '#2f3a46')
     scene.add(gridHelper)
-  }
-
-  function createPointLightHandle(pointLight: THREE.PointLight) {
-    const geometry = new THREE.SphereGeometry(0.12, 24, 16)
-    const material = new THREE.MeshBasicMaterial({ color: pointLight.color })
-    const handle = new THREE.Mesh(geometry, material)
-    handle.position.copy(pointLight.position)
-
-    return handle
   }
 
   function updateRendererSize() {
@@ -163,6 +131,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
     raycaster.setFromCamera(pointer, camera)
 
+    const pointLight = sceneLights.getPointLight()
+    const pointLightHandle = sceneLights.getPointLightHandle()
+
     if (pointLightHandle && pointLight) {
       const lightHandleHits = raycaster.intersectObject(pointLightHandle)
 
@@ -183,6 +154,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function handleCanvasPointerMove(event: PointerEvent) {
+    const pointLight = sceneLights.getPointLight()
+    const pointLightHandle = sceneLights.getPointLightHandle()
+
     if (!canvas || !camera || !pointLight || !pointLightHandle || !isDraggingPointLight)
       return
 
@@ -193,9 +167,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       return
 
     const nextPosition = getHorizontalDragPosition(pointLight.position, dragHitPoint)
-    pointLight.position.set(nextPosition.x, nextPosition.y, nextPosition.z)
-    pointLightHandle.position.copy(pointLight.position)
-    pointLightHelper?.update()
+    sceneLights.setPointLightPosition(nextPosition)
     options.onPointLightPositionChanged?.(nextPosition)
   }
 
@@ -369,30 +341,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
   }
 
   function setLightSettings(settings: LightSettings) {
-    if (ambientLight) {
-      ambientLight.color.set(settings.ambientColor)
-      ambientLight.intensity = settings.ambientIntensity
-    }
-
-    if (directionalLight) {
-      directionalLight.color.set(settings.directionalColor)
-      directionalLight.intensity = settings.directionalIntensity
-    }
-
-    if (pointLight) {
-      pointLight.color.set(settings.pointColor)
-      pointLight.intensity = settings.pointIntensity
-      pointLight.position.set(
-        settings.pointPosition.x,
-        settings.pointPosition.y,
-        settings.pointPosition.z,
-      )
-      if (pointLightHandle) {
-        pointLightHandle.material.color.set(settings.pointColor)
-        pointLightHandle.position.copy(pointLight.position)
-      }
-      pointLightHelper?.update()
-    }
+    sceneLights.setLightSettings(settings)
   }
 
   function setViewerDisplaySettings(settings: ViewerDisplaySettings) {
@@ -408,8 +357,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     if (ground)
       ground.visible = settings.showGround
 
-    if (pointLightHelper)
-      pointLightHelper.visible = settings.showPointLightHelper
+    sceneLights.setPointLightHelperVisible(settings.showPointLightHelper)
 
     if (renderer)
       renderer.toneMappingExposure = normalizeToneMappingExposure(settings.toneMappingExposure)
@@ -494,8 +442,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     if (scene)
       scene.environment = null
     environmentTexture = undefined
-    pointLightHandle?.geometry.dispose()
-    pointLightHandle?.material.dispose()
+    sceneLights.dispose()
     axesHelper?.geometry.dispose()
     if (Array.isArray(axesHelper?.material))
       axesHelper.material.forEach(material => material.dispose())
@@ -508,7 +455,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       gridHelper?.material.dispose()
     ground?.geometry.dispose()
     ground?.material.dispose()
-    pointLightHelper?.dispose()
     controls?.dispose()
     timer?.dispose()
     renderer?.dispose()
@@ -519,11 +465,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     placeholderMesh = undefined
     loadedModel = undefined
     ground = undefined
-    ambientLight = undefined
-    directionalLight = undefined
-    pointLight = undefined
-    pointLightHandle = undefined
-    pointLightHelper = undefined
+    sceneLights.resetReferences()
     axesHelper = undefined
     gridHelper = undefined
     environmentTexture = undefined
@@ -558,11 +500,8 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     ground = createGround()
     scene.add(ground)
 
-    const pointLight = addLights(scene)
-    pointLightHandle = createPointLightHandle(pointLight)
-    scene.add(pointLightHandle)
-
-    addHelpers(scene, pointLight)
+    sceneLights.addToScene(scene)
+    addSceneHelpers(scene)
 
     renderer = createRenderer(canvasElement, sizes.width, sizes.height)
     addEnvironmentLighting(scene, renderer)
