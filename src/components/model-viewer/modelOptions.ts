@@ -46,6 +46,13 @@ export const modelOptions: ModelOption[] = [
     url: `${modelAssetBaseUrl}/BoomBox.glb`,
   },
   {
+    id: 'carbon-fibre',
+    name: 'Carbon Fibre Ball',
+    kind: 'glb',
+    fileName: 'CarbonFibre.glb',
+    url: `${modelAssetBaseUrl}/CarbonFibre.glb`,
+  },
+  {
     id: 'damaged-helmet',
     name: 'Damaged Helmet',
     kind: 'glb',
