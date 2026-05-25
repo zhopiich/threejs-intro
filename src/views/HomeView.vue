@@ -54,8 +54,8 @@ const lightSettings = ref<LightSettings>({
 })
 const viewerDisplaySettings = ref<ViewerDisplaySettings>({
   autoRotate: false,
-  showAxesHelper: true,
-  showGridHelper: true,
+  showAxesHelper: false,
+  showGridHelper: false,
   showGround: true,
   showPointLightHelper: true,
   toneMappingExposure: 1,
