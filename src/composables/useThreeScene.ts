@@ -1,4 +1,4 @@
-import type { LightSettings, ThreeSceneOptions, ViewerDisplaySettings } from './three/sceneTypes'
+import type { LightSettings, PrimitiveModelType, ThreeSceneOptions, ViewerDisplaySettings } from './three/sceneTypes'
 
 import * as THREE from 'three'
 
@@ -24,6 +24,7 @@ export type {
   LightSettings,
   ModelLoadingState,
   ModelResourceStats,
+  PrimitiveModelType,
   SelectedObjectInfo,
   ThreeSceneOptions,
   ViewerDisplaySettings,
@@ -180,12 +181,12 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     )
   }
 
-  function showPlaceholderModel() {
+  function showPrimitiveModel(type: PrimitiveModelType) {
     if (!scene)
       return
 
     modelLoadId += 1
-    sceneModels.showPlaceholderModel(scene)
+    sceneModels.showPrimitiveModel(scene, type)
     options.onModelLoadingStateChanged?.({ status: 'idle', progress: 0 })
 
     const controls = sceneRenderer.getControls()
@@ -236,11 +237,11 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
       if (!sceneRenderer.getRenderer() || !scene || !camera)
         return false
 
-      const placeholderMesh = sceneModels.getPlaceholderMesh()
-      if (placeholderMesh) {
-        placeholderMesh.position.y = Math.sin(elapsedTime * 1.5) * 0.3
-        placeholderMesh.rotation.x = elapsedTime * 0.45
-        placeholderMesh.rotation.y = elapsedTime * 0.8
+      const primitiveMesh = sceneModels.getPrimitiveMesh()
+      if (primitiveMesh) {
+        primitiveMesh.position.y = Math.sin(elapsedTime * 1.5) * 0.3
+        primitiveMesh.rotation.x = elapsedTime * 0.45
+        primitiveMesh.rotation.y = elapsedTime * 0.8
       }
 
       sceneRenderer.updateControls()
@@ -250,7 +251,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
 
   function disposeSceneResources() {
     sceneModels.disposeLoadedModel(scene)
-    sceneModels.disposePlaceholderMesh(scene)
+    sceneModels.disposePrimitiveMesh(scene)
     sceneHelpers.dispose()
     sceneLights.dispose()
     sceneRenderer.dispose(scene)
@@ -279,7 +280,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     if (!camera)
       return
 
-    sceneModels.addPlaceholderToScene(scene)
+    sceneModels.addPrimitiveToScene(scene, 'box')
 
     sceneHelpers.addToScene(scene)
     sceneLights.addToScene(scene)
@@ -307,6 +308,6 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     setLightSettings,
     setModelColor,
     setViewerDisplaySettings,
-    showPlaceholderModel,
+    showPrimitiveModel,
   }
 }

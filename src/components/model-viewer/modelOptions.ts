@@ -1,7 +1,10 @@
-interface PlaceholderModelOption {
+import type { PrimitiveModelType } from '@/composables/useThreeScene'
+
+interface PrimitiveModelOption {
   id: string
   name: string
-  kind: 'placeholder'
+  kind: 'primitive'
+  primitive: PrimitiveModelType
 }
 
 interface GlbModelOption {
@@ -12,7 +15,7 @@ interface GlbModelOption {
   url: string
 }
 
-export type ModelOption = PlaceholderModelOption | GlbModelOption
+export type ModelOption = PrimitiveModelOption | GlbModelOption
 
 const modelAssetBaseUrl = `${import.meta.env.BASE_URL}models`
 
@@ -20,7 +23,34 @@ export const modelOptions: ModelOption[] = [
   {
     id: 'placeholder-cube',
     name: 'Placeholder Cube',
-    kind: 'placeholder',
+    kind: 'primitive',
+    primitive: 'box',
+  },
+  {
+    id: 'torus-knot',
+    name: 'Torus Knot',
+    kind: 'primitive',
+    primitive: 'torus-knot',
+  },
+  {
+    id: 'icosahedron',
+    name: 'Icosahedron',
+    kind: 'primitive',
+    primitive: 'icosahedron',
+  },
+  {
+    id: 'boom-box',
+    name: 'Boom Box',
+    kind: 'glb',
+    fileName: 'BoomBox.glb',
+    url: `${modelAssetBaseUrl}/BoomBox.glb`,
+  },
+  {
+    id: 'carbon-fibre',
+    name: 'Carbon Fibre Ball',
+    kind: 'glb',
+    fileName: 'CarbonFibre.glb',
+    url: `${modelAssetBaseUrl}/CarbonFibre.glb`,
   },
   {
     id: 'damaged-helmet',

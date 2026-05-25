@@ -21,10 +21,13 @@ export interface ViewerDisplaySettings {
   toneMappingExposure: number
 }
 
+export type PrimitiveModelType = 'box' | 'torus-knot' | 'icosahedron'
+
 export interface ThreeSceneOptions {
   onModelResourceStatsChanged?: (stats: ModelResourceStats) => void
   onModelSelected?: (info: SelectedObjectInfo | undefined) => void
   onModelLoadingStateChanged?: (state: ModelLoadingState) => void
+  onPrimitiveVisibleChanged?: (visible: boolean) => void
   onPlaceholderVisibleChanged?: (visible: boolean) => void
   onPointLightPositionChanged?: (position: LightSettings['pointPosition']) => void
 }

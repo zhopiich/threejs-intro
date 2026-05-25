@@ -2,6 +2,18 @@
 
 This project includes local sample GLB assets from the Khronos glTF Sample Assets repository.
 
+### `public/models/BoomBox.glb`
+
+- Model: Boom Box
+- Source: [KhronosGroup/glTF-Sample-Assets - BoomBox](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/BoomBox)
+- Legal: © 2017, Public. [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/legalcode) - Microsoft for Everything.
+
+### `public/models/CarbonFibre.glb`
+
+- Model: Carbon Fibre Ball
+- Source: [KhronosGroup/glTF-Sample-Assets - CarbonFibre](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CarbonFibre)
+- Legal: © 2023, Wayfair. [CC BY 4.0 International](https://creativecommons.org/licenses/by/4.0/legalcode) - Eric Chadwick for Models and Textures.
+
 ### `public/models/DamagedHelmet.glb`
 
 - Model: Damaged Helmet

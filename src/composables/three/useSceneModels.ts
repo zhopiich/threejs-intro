@@ -1,53 +1,71 @@
-import type { ThreeSceneOptions } from './sceneTypes'
+import type { PrimitiveModelType, ThreeSceneOptions } from './sceneTypes'
 
 import * as THREE from 'three'
 
 import { collectObject3DResourceStats, disposeObject3DResources } from './modelResources'
 
 export function useSceneModels(options: ThreeSceneOptions = {}) {
-  let placeholderMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial> | undefined
+  let primitiveMesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined
+  let primitiveType: PrimitiveModelType | undefined
   let loadedModel: THREE.Group | undefined
   let selectableObjects: THREE.Object3D[] = []
 
-  function addPlaceholderToScene(scene: THREE.Scene) {
-    placeholderMesh = createPlaceholderMesh()
-    scene.add(placeholderMesh)
-    selectableObjects = [placeholderMesh]
+  function addPrimitiveToScene(scene: THREE.Scene, type: PrimitiveModelType) {
+    primitiveMesh = createPrimitiveMesh(type)
+    primitiveType = type
+    scene.add(primitiveMesh)
+    selectableObjects = [primitiveMesh]
     emitCurrentModelResourceStats()
-    options.onPlaceholderVisibleChanged?.(true)
+    emitPrimitiveVisibleChanged(true)
   }
 
-  function showPlaceholderModel(scene: THREE.Scene) {
+  function showPrimitiveModel(scene: THREE.Scene, type: PrimitiveModelType) {
     disposeLoadedModel(scene)
 
-    if (!placeholderMesh)
-      placeholderMesh = createPlaceholderMesh()
+    if (primitiveMesh && primitiveType !== type)
+      disposePrimitiveMesh(scene)
 
-    if (!placeholderMesh.parent)
-      scene.add(placeholderMesh)
+    if (!primitiveMesh) {
+      primitiveMesh = createPrimitiveMesh(type)
+      primitiveType = type
+    }
 
-    selectableObjects = [placeholderMesh]
+    if (!primitiveMesh.parent)
+      scene.add(primitiveMesh)
+
+    selectableObjects = [primitiveMesh]
     emitCurrentModelResourceStats()
-    options.onPlaceholderVisibleChanged?.(true)
+    emitPrimitiveVisibleChanged(true)
   }
 
-  function createPlaceholderMesh() {
-    const geometry = new THREE.BoxGeometry(1, 1, 1)
+  function createPrimitiveMesh(type: PrimitiveModelType) {
+    const geometry = createPrimitiveGeometry(type)
     const material = new THREE.MeshStandardMaterial({
       color: '#66a3ff',
       roughness: 0.4,
       metalness: 0.6,
       wireframe: false,
     })
-    const placeholderMesh = new THREE.Mesh(geometry, material)
-    placeholderMesh.castShadow = true
+    const primitiveMesh = new THREE.Mesh(geometry, material)
+    primitiveMesh.castShadow = true
 
-    return placeholderMesh
+    return primitiveMesh
+  }
+
+  function createPrimitiveGeometry(type: PrimitiveModelType) {
+    switch (type) {
+      case 'box':
+        return new THREE.BoxGeometry(1, 1, 1)
+      case 'torus-knot':
+        return new THREE.TorusKnotGeometry(0.65, 0.22, 128, 18)
+      case 'icosahedron':
+        return new THREE.IcosahedronGeometry(0.8, 0)
+    }
   }
 
   function setLoadedModel(scene: THREE.Scene, model: THREE.Group) {
     disposeLoadedModel(scene)
-    disposePlaceholderMesh(scene)
+    disposePrimitiveMesh(scene)
 
     loadedModel = model
     normalizeLoadedModel(loadedModel)
@@ -90,18 +108,19 @@ export function useSceneModels(options: ThreeSceneOptions = {}) {
   }
 
   function setModelColor(color: string) {
-    placeholderMesh?.material.color.set(color)
+    primitiveMesh?.material.color.set(color)
   }
 
-  function disposePlaceholderMesh(scene?: THREE.Scene) {
-    if (!placeholderMesh)
+  function disposePrimitiveMesh(scene?: THREE.Scene) {
+    if (!primitiveMesh)
       return
 
-    scene?.remove(placeholderMesh)
-    placeholderMesh.geometry.dispose()
-    placeholderMesh.material.dispose()
-    placeholderMesh = undefined
-    options.onPlaceholderVisibleChanged?.(false)
+    scene?.remove(primitiveMesh)
+    primitiveMesh.geometry.dispose()
+    primitiveMesh.material.dispose()
+    primitiveMesh = undefined
+    primitiveType = undefined
+    emitPrimitiveVisibleChanged(false)
   }
 
   function disposeLoadedModel(scene?: THREE.Scene) {
@@ -111,33 +130,43 @@ export function useSceneModels(options: ThreeSceneOptions = {}) {
     scene?.remove(loadedModel)
     disposeObject3DResources(loadedModel)
     loadedModel = undefined
-    selectableObjects = placeholderMesh ? [placeholderMesh] : []
+    selectableObjects = primitiveMesh ? [primitiveMesh] : []
     emitCurrentModelResourceStats()
   }
 
   function emitCurrentModelResourceStats() {
     options.onModelResourceStatsChanged?.(
-      collectObject3DResourceStats(loadedModel ?? placeholderMesh),
+      collectObject3DResourceStats(loadedModel ?? primitiveMesh),
     )
   }
 
+  function emitPrimitiveVisibleChanged(visible: boolean) {
+    options.onPrimitiveVisibleChanged?.(visible)
+    options.onPlaceholderVisibleChanged?.(visible)
+  }
+
   function resetReferences() {
-    placeholderMesh = undefined
+    primitiveMesh = undefined
+    primitiveType = undefined
     loadedModel = undefined
     selectableObjects = []
   }
 
   return {
-    addPlaceholderToScene,
+    addPrimitiveToScene,
+    addPlaceholderToScene: (scene: THREE.Scene) => addPrimitiveToScene(scene, 'box'),
     disposeLoadedModel,
-    disposePlaceholderMesh,
+    disposePrimitiveMesh,
+    disposePlaceholderMesh: disposePrimitiveMesh,
     emitCurrentModelResourceStats,
     getLoadedModel: () => loadedModel,
-    getPlaceholderMesh: () => placeholderMesh,
+    getPrimitiveMesh: () => primitiveMesh,
+    getPlaceholderMesh: () => primitiveMesh,
     getSelectableObjects: () => selectableObjects,
     resetReferences,
     setLoadedModel,
     setModelColor,
-    showPlaceholderModel,
+    showPrimitiveModel,
+    showPlaceholderModel: (scene: THREE.Scene) => showPrimitiveModel(scene, 'box'),
   }
 }
