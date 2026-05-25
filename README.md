@@ -2,6 +2,12 @@
 
 This project includes local sample GLB assets from the Khronos glTF Sample Assets repository.
 
+### `public/models/BoomBox.glb`
+
+- Model: Boom Box
+- Source: [KhronosGroup/glTF-Sample-Assets - BoomBox](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/BoomBox)
+- Legal: © 2017, Public. [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/legalcode) - Microsoft for Everything.
+
 ### `public/models/DamagedHelmet.glb`
 
 - Model: Damaged Helmet

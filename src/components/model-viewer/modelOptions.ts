@@ -39,6 +39,13 @@ export const modelOptions: ModelOption[] = [
     primitive: 'icosahedron',
   },
   {
+    id: 'boom-box',
+    name: 'Boom Box',
+    kind: 'glb',
+    fileName: 'BoomBox.glb',
+    url: `${modelAssetBaseUrl}/BoomBox.glb`,
+  },
+  {
     id: 'damaged-helmet',
     name: 'Damaged Helmet',
     kind: 'glb',
