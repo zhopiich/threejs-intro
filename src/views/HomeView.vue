@@ -33,7 +33,7 @@ const {
 } = useModelViewerState(modelOptions, defaultModel)
 const modelColor = ref('#66a3ff')
 const modelColorOptions = ['#66a3ff', '#ff6b6b', '#51cf66']
-const isPlaceholderVisible = ref(false)
+const isPrimitiveVisible = ref(false)
 const modelResourceStats = ref<ModelResourceStats>({
   meshCount: 0,
   materialCount: 0,
@@ -84,7 +84,7 @@ function resetView() {
       @model-loading-state-changed="updateModelLoadingState"
       @model-resource-stats-changed="modelResourceStats = $event"
       @model-selected="updateSelectedObject"
-      @placeholder-visible-changed="isPlaceholderVisible = $event"
+      @primitive-visible-changed="isPrimitiveVisible = $event"
       @point-light-position-changed="updatePointLightPosition"
     />
 
@@ -101,7 +101,7 @@ function resetView() {
         <ModelSelector v-model="selectedModelId" :options="modelOptions" />
         <ModelLifecycleStats :stats="modelResourceStats" />
         <ModelColorPicker
-          v-if="isPlaceholderVisible"
+          v-if="isPrimitiveVisible"
           v-model="modelColor"
           :options="modelColorOptions"
         />

@@ -23,7 +23,7 @@ const emit = defineEmits<{
   modelResourceStatsChanged: [stats: ModelResourceStats]
   modelSelected: [info: SelectedObjectInfo | undefined]
   modelLoadingStateChanged: [state: ModelLoadingState]
-  placeholderVisibleChanged: [visible: boolean]
+  primitiveVisibleChanged: [visible: boolean]
   pointLightPositionChanged: [position: LightSettings['pointPosition']]
 }>()
 
@@ -36,7 +36,7 @@ const {
   setLightSettings,
   setModelColor,
   setViewerDisplaySettings,
-  showPlaceholderModel,
+  showPrimitiveModel,
 } = useThreeScene({
   onModelResourceStatsChanged(stats) {
     emit('modelResourceStatsChanged', stats)
@@ -47,8 +47,8 @@ const {
   onModelLoadingStateChanged(state) {
     emit('modelLoadingStateChanged', state)
   },
-  onPlaceholderVisibleChanged(visible) {
-    emit('placeholderVisibleChanged', visible)
+  onPrimitiveVisibleChanged(visible) {
+    emit('primitiveVisibleChanged', visible)
   },
   onPointLightPositionChanged(position) {
     emit('pointLightPositionChanged', position)
@@ -68,8 +68,9 @@ watch(() => props.viewerDisplaySettings, (settings) => {
 }, { deep: true })
 
 watch(() => props.model, (model) => {
-  if (model.kind === 'placeholder') {
-    showPlaceholderModel()
+  if (model.kind === 'primitive') {
+    showPrimitiveModel(model.primitive)
+    setModelColor(props.modelColor)
     return
   }
 
@@ -85,7 +86,9 @@ onMounted(() => {
   setLightSettings(props.lightSettings)
   setViewerDisplaySettings(props.viewerDisplaySettings)
 
-  if (props.model.kind === 'glb')
+  if (props.model.kind === 'primitive')
+    showPrimitiveModel(props.model.primitive)
+  else
     loadModel(props.model.url)
 })
 

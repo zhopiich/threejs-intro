@@ -56,7 +56,7 @@ const emit = defineEmits<{
         </span>
       </template>
       <template v-else>
-        Placeholder ready
+        {{ requestedModelName }} ready
       </template>
     </p>
     <button class="reset-button" type="button" @click="emit('resetView')">
