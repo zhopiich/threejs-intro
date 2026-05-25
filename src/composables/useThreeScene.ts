@@ -152,9 +152,7 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
         }
 
         sceneModels.setLoadedModel(scene, gltf.scene)
-        const controls = sceneRenderer.getControls()
-        if (controls)
-          sceneCamera.fitCameraToObject(gltf.scene, controls)
+        sceneCamera.updateCameraFitForObject(gltf.scene)
         options.onModelLoadingStateChanged?.({ status: 'loaded', progress: 1, url })
       },
       (progressEvent) => {
@@ -189,9 +187,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     sceneModels.showPrimitiveModel(scene, type)
     options.onModelLoadingStateChanged?.({ status: 'idle', progress: 0 })
 
-    const controls = sceneRenderer.getControls()
-    if (controls)
-      sceneCamera.resetCameraView(controls)
+    const primitiveMesh = sceneModels.getPrimitiveMesh()
+    if (primitiveMesh)
+      sceneCamera.updateCameraFitForObject(primitiveMesh)
   }
 
   function resetCameraView() {
@@ -288,6 +286,9 @@ export function useThreeScene(options: ThreeSceneOptions = {}) {
     sceneRenderer.createRenderer(canvasElement, sizes.width, sizes.height)
     sceneRenderer.addEnvironmentLighting(scene)
     sceneRenderer.createControls(camera)
+    const primitiveMesh = sceneModels.getPrimitiveMesh()
+    if (primitiveMesh)
+      sceneCamera.updateCameraFitForObject(primitiveMesh)
     addEventListeners()
 
     startAnimationLoop()

@@ -35,6 +35,11 @@ export function useSceneCamera() {
   }
 
   function fitCameraToObject(object: THREE.Object3D, controls: CameraControlsLike) {
+    updateCameraFitForObject(object)
+    resetCameraView(controls)
+  }
+
+  function updateCameraFitForObject(object: THREE.Object3D) {
     if (!camera)
       return
 
@@ -43,7 +48,6 @@ export function useSceneCamera() {
 
     box.getBoundingSphere(sphere)
     lastCameraFit = calculateCameraFit(sphere.center, sphere.radius, camera.fov)
-    resetCameraView(controls)
   }
 
   function resetCameraView(controls: CameraControlsLike) {
@@ -70,6 +74,7 @@ export function useSceneCamera() {
     getCamera: () => camera,
     resetCameraView,
     resetReferences,
+    updateCameraFitForObject,
     updateViewport,
   }
 }
