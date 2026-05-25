@@ -21,7 +21,7 @@ export interface ViewerDisplaySettings {
   toneMappingExposure: number
 }
 
-export type PrimitiveModelType = 'box' | 'torus-knot'
+export type PrimitiveModelType = 'box' | 'torus-knot' | 'icosahedron'
 
 export interface ThreeSceneOptions {
   onModelResourceStatsChanged?: (stats: ModelResourceStats) => void

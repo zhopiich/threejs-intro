@@ -33,6 +33,12 @@ export const modelOptions: ModelOption[] = [
     primitive: 'torus-knot',
   },
   {
+    id: 'icosahedron',
+    name: 'Icosahedron',
+    kind: 'primitive',
+    primitive: 'icosahedron',
+  },
+  {
     id: 'damaged-helmet',
     name: 'Damaged Helmet',
     kind: 'glb',

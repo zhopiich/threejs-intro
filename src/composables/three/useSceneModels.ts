@@ -39,9 +39,7 @@ export function useSceneModels(options: ThreeSceneOptions = {}) {
   }
 
   function createPrimitiveMesh(type: PrimitiveModelType) {
-    const geometry = type === 'box'
-      ? new THREE.BoxGeometry(1, 1, 1)
-      : new THREE.TorusKnotGeometry(0.65, 0.22, 128, 18)
+    const geometry = createPrimitiveGeometry(type)
     const material = new THREE.MeshStandardMaterial({
       color: '#66a3ff',
       roughness: 0.4,
@@ -52,6 +50,17 @@ export function useSceneModels(options: ThreeSceneOptions = {}) {
     primitiveMesh.castShadow = true
 
     return primitiveMesh
+  }
+
+  function createPrimitiveGeometry(type: PrimitiveModelType) {
+    switch (type) {
+      case 'box':
+        return new THREE.BoxGeometry(1, 1, 1)
+      case 'torus-knot':
+        return new THREE.TorusKnotGeometry(0.65, 0.22, 128, 18)
+      case 'icosahedron':
+        return new THREE.IcosahedronGeometry(0.8, 0)
+    }
   }
 
   function setLoadedModel(scene: THREE.Scene, model: THREE.Group) {
